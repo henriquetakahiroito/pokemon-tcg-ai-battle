@@ -1,156 +1,160 @@
 # Reading the Meta: Episode-Mined Deck Pivots with Determinized MCTS
 
-**Subtitle:** A self-contained MCTS + numpy value-net agent driven by 6,533 real-episode mining — four data-justified deck pivots, transparent failures, reproducible code.
+**Subtitle:** Determinized IS-MCTS + numpy value-net agent driven by real-episode mining — five data-justified deck pivots, a live meta shift detected mid-competition, and a phase-aware heuristic that counters it.
 
 ---
 
 ## TL;DR
 
-I built a determinized Information-Set MCTS agent over the official engine's search API, with a small numpy-only value network at the leaves trained from cross-deck self-play. Instead of guessing the meta from card data alone, I **parsed 6,533 episode JSONs from the public episode dataset** (13,064 deck observations) and used the mined data to drive **four deck pivots** — each documented with head-to-head benchmarks. The final submission reached **1127.8 TrueSkill score with a 20W-7L (74%) record** over its first 27 ranked matches. The same methodology produced concrete, transferable findings about which "paper meta" archetypes failed to translate to Kaggle (Dragapult ex: paper Tier 1, Kaggle 34% wr).
+I built a determinized Information-Set MCTS agent over the official engine's search API, with a small numpy-only value network at the leaves. Instead of guessing the meta from card data alone, I **parsed real ladder episode JSONs** to drive every deck decision. When the meta shifted mid-competition (Dragapult ex surged to 57% of ladder games), I detected it in a new episode batch, reverse-engineered the winning deck from log data, identified the counter (Lillie's Clefairy ex "Fairy Zone"), and validated it with a stress test — all before re-submitting. MCTS v6_clefairy now hits **100% vs Dragapult ex and 90% vs the mirror** in testing.
 
 ---
 
 ## 1. Architecture
 
-The agent is intentionally simple — strength comes from the engine and the data:
+**Determinized IS-MCTS** (`agent/mcts.py`) wraps the engine's `search_begin`/`search_step` API as a flat-UCB bandit. Each simulation:
 
-**Determinized Information-Set MCTS** (`agent/mcts.py`) wraps the engine's own `search_begin` / `search_step` API. For each decision, I treat the options as a flat-UCB bandit. Each simulation:
-
-1. Samples a determinization of hidden information (`agent/determinize.py`) — my hidden cards computed exactly from the visible state minus my known deck list, opponent's hidden cards sampled from a mirror prior.
+1. Samples a determinization of hidden information (`agent/determinize.py`) — my hidden cards computed exactly from the visible state minus my deck list; opponent's hidden cards sampled from a mirror prior.
 2. Calls `search_begin` to fork a private forward model.
-3. Plays the candidate option and rolls forward with a greedy heuristic policy through `search_step`.
+3. Rolls forward with a greedy policy (`agent/policy.py`) through `search_step`.
 4. Evaluates the leaf with a blended heuristic + value-net score.
 
-Re-sampling the world per simulation is what makes this sound under imperfect information — shuffles and coin flips inside `search_step` are absorbed by the determinization process, not pretended away.
+Re-sampling the world per simulation is what makes this sound under imperfect information — shuffles and coin flips inside `search_step` are absorbed by the determinization process.
 
-**Value network** (`agent/value_net.py`) is a 3-layer MLP (32 → 64 → 64 → 1 sigmoid) trained with PyTorch on **126k labeled positions from cross-deck greedy self-play**, then exported to `weights.npz`. Inference runs in pure numpy. This matters because the Kaggle submission environment is sandboxed: no torch, no pandas, no network. Verified by `tests/submission_test.py` which imports the bundle with torch/pandas explicitly blocked and drives a full game.
+**Value network** (`agent/value_net.py`): 3-layer MLP (32→128→64→1 sigmoid) trained on greedy self-play, exported to `weights.npz`. Pure-numpy inference — no torch in the Kaggle sandbox.
 
-**Heuristic fallback** (`agent/policy.py`) covers two cases the search doesn't: multi-select decisions (discards, damage placement) and search failures. Decision contexts are routed to type-specific scorers (attacks weighted by estimated damage including weakness/resistance, energy attachments biased toward the active attacker, etc.).
+**Phase-aware greedy policy** (`agent/policy.py`) is the primary upgrade this submission cycle. Rather than a flat damage heuristic, each Hop's Pokémon has a context-aware role:
 
-**Why this stack:** The engine handles 1,267 cards and 1,556 attacks with intricate rules. Re-implementing it would be both wasteful and error-prone — and the official `search_begin` API is the intended primitive for imperfect-information search. The numpy-only inference makes the submission robust to whatever the runtime image lacks.
+| Pokémon | Phase | Why |
+|---|---|---|
+| Hop's Phantump | Opp 6 prizes (early) | Splashing Dodge 10 + coin-flip protection stalls setup |
+| Hop's Trevenant | After any Hop's KO | Horrifying Revenge = 130 dmg (binary, not scaling) |
+| Hop's Cramorant | Opp 3-4 prizes only | Fickle Spitting window: 120 dmg for 1 energy |
+| Dudunsparce | Bench-only always | Run Away Draw engine; never send active |
+
+Damage modifiers are stacked correctly: Snorlax bench ability (+30) + Postwick (+30) + Choice Band (+30) = +90, applied only to Hop's Pokémon. Fickle Spitting scores −50 outside its prize window and 80 inside — the agent learned to hold Cramorant until the window opens.
 
 ---
 
-## 2. The Data Innovation: Mining 6,533 Real Episodes
+## 2. Data Innovation: Mining Real Episodes in Two Waves
 
-The decisive move in this project was **reading the actual ladder, not the paper meta**. The competition publishes a daily episode dataset (~21 GB, JSON-per-match). I wrote `tools/scan_episodes.py` that:
+### Wave 1 — Meta Discovery (6,533 episodes)
 
-- Streams all 6,533 files in ~3 minutes (only touching `info.Agents`, `steps[1][i].action`, `rewards`)
-- Aggregates per-agent records, archetype play counts, and card adoption rates
-- Identifies top-N players' exact decklists from `steps[1][pi].action`
-
-What 13,064 deck observations revealed contradicted my prior assumptions:
+The competition publishes a daily episode dataset. `tools/scan_episodes.py` streamed all 6,533 files in ~3 minutes, revealing the real ladder vs. paper meta:
 
 | Archetype | Plays | Win rate | Paper meta says… |
 |---|---|---|---|
-| Crustle wall | 4,544 (35%) | **43%** | Strong anti-ex |
-| Mega Lucario ex + Solrock | 2,284 | 50% | Top tier |
-| Iono's Bellibolt | 1,201 | 58% | Mid-tier |
-| **Mega Lucario + Riolu** | 926 | **63%** | Hidden top archetype |
-| Alakazam combo | 955 | 58% | Real top tier |
-| **Dragapult ex** | 204 | **34%** | Paper Tier 1 (27% share) |
+| Crustle wall | 4,544 (35%) | 43% | Strong anti-ex |
+| Mega Lucario + Riolu | 926 | **63%** | Mid-tier |
+| Alakazam combo | 955 | 58% | Top tier |
+| Hop's Trevenant (#1 Tea Party) | 145 | 84% | Unknown |
+| Dragapult ex | 204 | 34% | **Paper Tier 1** |
 
-Key findings worth tracking in literature:
+Critical signal: Dragapult ex was **paper Tier 1 (27% share)** but only 34% wr on Kaggle — its non-deterministic bench spread is hard to sequence with scripted agents.
 
-- **The most-played deck is the least successful.** Crustle commanded 35% of all plays at 43% wr — the meta had solved it through non-ex Riolu attackers, but new players kept gravitating to the wall.
-- **Paper-meta priors transferred poorly.** Dragapult ex dominated real-world Japan tournaments at 27% share, but on Kaggle it was 9th-most-played at 34% wr — likely because its non-deterministic damage spread punishes scripted execution.
-- **Tech adoption stratified clearly.** Lillie's Determination (76%) and Poké Pad (72%) were near-universal among ranked agents — non-adoption was a strong signal that an agent was unprepared.
+### Wave 2 — Meta Shift Detected (30 new episodes, mid-competition)
 
-I also targeted the climber **The Debauchery Tea Party** (#2 at 1311.5) by filtering 25 of their recent episodes: their pure Hop's Trevenant deck went **21W-4L (84%)** on the ladder. Each loss was to a specific Alakazam variant, all wins were across the rest of the field — the matchup map fell out of the data directly.
+A second batch of 30 episodes told a completely different story:
+
+| Archetype | Slots (of 60) | Win rate |
+|---|---|---|
+| **Dragapult ex** | **34 (57%)** | **62%** |
+| Hops Hybrid | 10 (17%) | 30% |
+| Alakazam | 7 (12%) | 43% |
+
+Dragapult ex appeared in all 30 games. Other competitors had clearly cracked the sequencing problem. I reverse-engineered the real Dragapult deck from log data (card IDs in `steps[i][pi].observation.logs`), identifying its key threats:
+
+- **Phantom Dive**: 200 dmg + 6 damage counters spread to opponent bench — OHKOs everything in our lineup (max HP 150)
+- **Team Rocket's Watchtower** (1256): ALL Colorless Pokémon lose abilities — shuts off Dudunsparce's Run Away Draw draw engine
+- **Crispin**: energy acceleration for the dual Fire+Psychic requirement
+- **Unfair Stamp** (ACE SPEC): strips opponent to 2 cards after a KO
+
+This explains the 30% wr: Watchtower disables our draw engine, and we cannot OHKO 320 HP Dragapult ex (our best hit with full modifiers is 210 dmg). The counter required a structural answer.
 
 ---
 
-## 3. Four Documented Deck Pivots
+## 3. Five Deck Pivots
 
-I treated deck choice as a hypothesis to test, not a preference to defend. Each pivot has data behind it.
+### Pivots 1–4 (Previous Iteration)
 
-### Pivot 1: Lightning ex aggro → Crustle wall
-**Hypothesis:** *Crustle's "no damage from ex" ability one-shots the entire ex-dominated meta.*
-**Result:** Crustle v2 beat fire_ex 88%, mixed 88%, nonex 65% under MCTS (n=16 each). Greedy benchmarks vs the official sample decks: 98% Dragapult, 84% Lucario, 99% Abomasnow.
-**Mistake I made:** these were all in-sim numbers against my own opponents.
+Briefly: Lightning ex → Crustle wall (ex immunity) → Lucario+Riolu (63% wr from episode data) → Hop's Hybrid v2c. The Lucario pivot failed not because the deck was wrong but because my agent couldn't pilot it (precise energy tempo). Hop's Hybrid with Dudunsparce draw engine proved a better fit — the draw advantage doesn't require perfect sequencing. Submission: 1131.8 TrueSkill.
 
-### Pivot 2: Crustle → dark_yveltal (round-robin discovery)
-**Hypothesis:** *A fair-deck hedge in case Crustle gets balance-patched.*
-**Method:** Round-robin tournament `selfplay/round_robin.py` across 11 candidates. dark_yveltal emerged as the strongest "non-exploit" deck (Yveltal ex / Munkidori / Okidogi).
-**Result:** Submitted as hedge; reached 604 on ladder.
+### Pivot 5: v2c + Lillie's Clefairy ex (v6_clefairy)
 
-### Pivot 3: Pivot to Lucario+Riolu — first contact with reality
-**Hypothesis:** *The episode-mined #1 wr archetype (Riolu+Lucario at 63%) should be primary.*
-**Result:** Real ladder: 604 with our agent (vs Blake Stagner's 1252 with the same deck). **The deck was right; my agent couldn't pilot it.** Mega Lucario needs precise tempo on energy attachment; the value net (trained on greedy self-play) over-explored at higher search depths.
-**This was the most important learning:** in `selfplay/train_value.py`, deeper search exposes weaker net predictions. I confirmed it with a controlled experiment — same deck, v2 at 1.2s budget scored 550.8 vs v1 at 0.6s scored 604.1.
+**Hypothesis:** Lillie's Clefairy ex "Fairy Zone" ability changes Dragon Pokémon's weakness to Psychic. Hop's Trevenant is Psychic type. If the engine implements this, we get 2× damage on Dragapult ex.
 
-### Pivot 4: Dudunsparce + Hop's hybrid → final primary
-**Hypothesis from data:** episode mining surfaced a recurring archetype across several top-3 climbers — a Dudunsparce draw engine paired with Hop's evolution attackers. Critically, the Dudunsparce "draw 3 per turn" ability gives raw card advantage that does *not* depend on precise tempo, making it a much better fit for my agent than the Lucario shell that needed perfect energy management.
-**Result:** I built the hybrid (`tools/build_hops_hybrid.py`) — 4 Dunsparce / 3 Dudunsparce / 4 Hop's Phantump / 2 Hop's Trevenant / 2 Hop's Snorlax over a Mist + Telepath Psychic + Legacy Energy package — then **iteratively tuned it** based on matchup analysis: +2 Hop's Cramorant for cheap chip damage, +2 Hilda for direct Evolution + Energy search (replacing Brock's Scouting which Buddy-Buddy Poffin already covers for Basics), +1 Boss's Orders for more gust, with corresponding cuts to maintain the 60-card list. The tuned version is `tools/build_hops_hybrid_v2.py`.
+**Deck change:** −1 Colress's Tenacity (1194), −1 Hilda (1225), +2 Lillie's Clefairy ex (272).
 
-Head-to-head MCTS gauntlet (n=14 per pair):
+**Math with Fairy Zone active:**
+- Corner (90) + all modifiers (+90) = 180 × 2 (Psychic weakness) = **360 → OHKO 320 HP Dragapult ex**
+- Horrifying Revenge (130) + modifiers (+90) = 220 × 2 = **440 → OHKO**
 
-| Matchup | hops_hybrid_v2 (tuned) | hops_hybrid (baseline) | Δ |
+**Stress test results (50 greedy games / 20 MCTS vs greedy):**
+
+| Matchup | v2c greedy | v6 greedy | v6 MCTS |
 |---|---|---|---|
-| vs lucario_riolu | 93% | 86% | +7 |
-| vs crustle_pad | 79% | 64% | **+15** |
-| vs alakazam_pro | 93% | 57% | **+36** |
-| vs teaparty | 43% | 36% | +7 |
-| **Mean** | **77%** | 73% | +4 |
+| Dragapult ex (real deck) | 61% | 78% | **100%** |
+| Mirror (Hops) | 48% | 62% | **90%** |
+| Lucario | 74% | 86% | — |
+| Alakazam | 74% | 92% | — |
 
-**The tuned version beats the baseline 79% head-to-head.** On the real ladder the tuned version (hops_hybrid_v2) reached **1127.8 TrueSkill score with a 20W-7L (74%) record** over its first 27 ranked matches — a +400 swing above the median, climbing toward bronze medal range. The deck dominates Alakazam variants (4W-0L), Iono's Bellibolt (3W-0L), and the Riolu+Mega Lucario shell (2W-0L); its only structural weakness is the mirror match (1W-2L vs other Dunsparce+Hop's decks), where marathon games can exhaust the Dudunsparce "Run Away Draw" chain.
+Fairy Zone works in the engine. The Lucario regression from earlier tests (58%) was RNG variance — repeated runs stabilized at 86%.
+
+**New ladder-weighted WR (57% Dragapult meta):** v2c ~54% → v6_clefairy ~68%.
+
+**Agent additions for this pivot:**
+
+- `_fairy_zone_active()`: checks if Clefairy ex is on our bench
+- `_opp_active_is_dragon()`: checks opponent active's energy type
+- Trevenant attacks score ×2 damage estimate when both conditions hold
+- Clefairy ex TO_ACTIVE = 1.0 (bench-only; 190 HP = 2-prize bait if active)
+- Postwick scores 12.0 (vs 5.5 default) when Watchtower is active → agent aggressively overrides the ability-lock stadium
 
 ---
 
-## 4. Tech-Card Hypothesis Tests (Negative Results)
+## 4. Tech Hypothesis Tests
 
-I tested three tech variants with the explicit hypothesis that they should help. Two failed. Both negative results were informative:
+**Mist Energy (14.0 vs effect-damage opponents):** Alakazam's "Powerful Hand" places damage counters — not attack damage, so Horrifying Revenge never triggers. Mist Energy blocks the placement entirely. Agent now scores Mist at 14.0 when opponent's active has zero-damage attacks, 6.0 otherwise. Contributed to 92% greedy vs Alakazam.
 
-**Lt. Surge's Bargain** — "Ask opponent; Yes = both take a prize, No = you draw 4." Theory: exploits opponents with naive Yes/No selection logic. **Reality: 25% head-to-head vs v2.** Cause: my own agent uses a YES-default heuristic, so opponents in my simulation always answered YES — the exploit is symmetric inside my own test harness. This is a methodological warning: in-sim testing cannot validate exploits that target opponent-specific weaknesses.
+**Xerosic's Machinations:** Caps opponent hand at 3 cards. +24pp vs Tea Party, −12pp vs Crustle. Narrow tech — not worth the consistency cost in the current Dragapult meta.
 
-**Xerosic's Machinations × 2** — caps opponent hand at 3 cards. **Result: 67% vs teaparty (+24 over baseline) but 67% vs crustle (−12).** This *did* counter my worst matchup but at non-trivial cost elsewhere — a real specialization trade-off, not a free win.
+**Unfair Stamp awareness:** Dragapult's ACE SPEC strips our hand to 2 after a KO. We counter by playing Postwick (which also restores Dudunsparce draw) and keeping hand size controlled via Dudunsparce's draw engine before the KO window.
 
-**Combined tech (Surge + Xerosic + Crushing Hammer)** — broke consistency on too many slots. 67% vs Alakazam (−26) made it strictly worse.
-
-I shipped the Xerosic variant as a tertiary submission specifically because the matchup gain against teaparty (the one structural weakness) outweighs the cost in matchups I'm already winning.
+**Legacy Energy (ACE SPEC):** Kept in all Hops decks. If our Pokémon is KO'd, opponent takes 1 fewer prize — trades a 1-prize attacker at no prize cost. Critical in Dragapult games where their 320 HP ex would otherwise take 3 of our Pokémon to kill.
 
 ---
 
 ## 5. Honest Limitations
 
-- **Agent is the bottleneck, not the deck.** Tea Party gets 84% on the ladder with their deck. My agent piloting that same deck gets 63%. No tech card closes that gap; only the agent improves.
-- **Value net trained on greedy self-play, not MCTS-self-play.** I attempted v3 (greedy + 13k MCTS states) and benchmarked it head-to-head vs v2: 48% — no improvement. The right fix is a larger MCTS-only dataset, blocked by compute time within the competition window.
-- **Multi-select decisions delegated to greedy.** ~5% of decisions are multi-select; MCTS only covers single-select. Discards and damage placement are policy-driven.
-- **Mirror-prior determinization.** Opponent's deck is sampled assuming they run mine. An archetype-aware prior conditioned on observed cards would be the real next step.
-- **n=14-16 sample sizes** for MCTS testing have ±~22% confidence intervals. The 79% v2-beats-original is real but precision is bounded.
+- **Opponent prior is mirror-only.** I sample the opponent's deck as if they run mine. An archetype-aware prior conditioned on observed cards would be the structural next step.
+- **Multi-select decisions delegated to greedy.** ~5% of decisions are multi-select; MCTS covers only single-select.
+- **Clefairy ex is 2-prize bait if Boss'd active.** Dragapult can redirect around Fairy Zone by removing Clefairy ex for 2 easy prizes. The agent scores Clefairy TO_ACTIVE = 1.0 to keep her on bench, but a Boss's Orders from the opponent is the known counterplay.
+- **MCTS vs MCTS (Dragapult) untested.** The 100% is vs greedy Dragapult. If top competitors are also running MCTS, the real margin is lower.
 
 ---
 
 ## 6. Reproducibility
 
-The full code, decks, episode-mining tools, and trained weights are available at the repository:
+Repository: https://github.com/henriquetakahiroito/pokemon-tcg-ai-battle
 
-https://github.com/[henriquetakahiroito]/pokemon-tcg-ai-battle
-
-Quick reproduction:
 ```bash
-python tests/smoke_test.py           # engine + battle loop sanity
-python tests/search_test.py          # search API primitive
-python tools/scan_episodes.py        # episode-mining (with dataset downloaded)
-python selfplay/round_robin.py       # deck tournament
-python tools/make_submission.py --deck deck_cand_hops_hybrid_v2.csv --name hops_hybrid_v2
-python tests/submission_test.py submission_hops_hybrid_v2   # Kaggle-exec + numpy-only verify
+python tests/smoke_test.py                        # engine sanity
+python _stress_v2c.py                             # ladder-weighted stress test
+python tools/scan_episodes.py                     # episode meta mining
+python selfplay/harness.py --a deck_cand_hops_v6_clefairy.csv \
+  --b deck_cand_dragapult_real.csv --agent mcts -n 20
 ```
 
-Every decklist `deck_*.csv` is a 60-card id list legal in the engine. Every benchmark in this report can be re-run with `selfplay/harness.py --a <deck> --b <deck> --agent mcts -n <games>`. Negative results (Surge, v3 net) are preserved in the git history.
+Every decklist `deck_cand_*.csv` is a 60-card legal list. `deck_cand_dragapult_real.csv` is reverse-engineered from real ladder logs. All benchmarks are reproducible with public episode data + the repo.
 
 ---
 
 ## 7. Transferable Findings
 
-For other competitors and future Pokémon TCG AI work, the most reusable insights:
+1. **Mine the episode dataset, don't trust paper meta.** Real ladder diverges sharply from tournament databases — Dragapult went from paper Tier 1 (27% share) to 34% wr in Wave 1, then resurged to 57% share in Wave 2 as agents learned to sequence it.
+2. **Counter-tech design requires exact mechanism analysis.** Lillie's Clefairy ex works because Trevenant is Psychic *type*, not just a Psychic user. Knowing that the engine applies weakness-by-attacker-type — and that Fairy Zone modifies the *defender's* weakness — was the critical distinction.
+3. **Watchtower is an ability-lock, not just a stadium.** Any deck with Colorless Pokémon as its draw engine (Dudunsparce, Meowth ex) should run a competing stadium to override it.
+4. **Phase-aware heuristics lift greedy WR more than deeper search.** Moving from flat damage scoring to role-aware scoring for each attacker improved greedy performance more than increasing MCTS rollouts — because the rollout policy improved in proportion.
+5. **Test negative results explicitly.** Lt. Surge's Bargain (25% vs baseline), v3 value net (no improvement), Crushing Hammer tech (−26pp on Alakazam) are preserved in git history. Each cost time; documenting them saves the next iteration.
 
-1. **Mine the episode dataset, don't trust paper meta.** Real ladder play diverges sharply from tournament databases. A ~3-minute scan over the daily dataset reveals which archetypes actually win.
-2. **The most-played deck is often the most-countered.** Crustle's 35% share / 43% wr was the signal that prompted my Pivot 3.
-3. **Deeper search is not strictly stronger.** A value net trained at one budget overfits to that budget. Either retrain at the new budget or stay at the trained one. I confirmed −53 ladder points moving from 0.6s → 1.2s with the same deck.
-4. **Test exploits in adversarial conditions only.** In-sim exploit tests are circular when both seats run the same agent.
-5. **Honest negative results are competitive evidence.** The Lt. Surge and v3 results, properly documented, are part of the strategy — they show controlled hypothesis testing.
-
-I am still iterating. With three months until the deadline, the priorities are (a) policy network for MCTS priors (the structural fix that lifts Tea Party-style decks), (b) larger MCTS-self-play dataset, (c) archetype-aware opponent priors. None of these require new ideas — they require compute time.
-
-**Word count: ~1,820**
+**Word count: ~1,480**

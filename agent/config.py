@@ -26,7 +26,8 @@ ROLLOUT_DEPTH = int(os.environ.get("PTCG_ROLLOUT_DEPTH", "24"))
 UCB_C = 1.4
 
 # Epsilon for the rollout policy (exploration noise inside playouts).
-ROLLOUT_EPSILON = 0.15
+# Lowered from 0.15: improved greedy policy makes noise more harmful than helpful.
+ROLLOUT_EPSILON = float(os.environ.get("PTCG_ROLLOUT_EPS", "0.05"))
 
 # Number of distinct determinizations to cycle through per move. Each simulation
 # samples hidden info; this caps how often we pay the (heavier) search_begin call

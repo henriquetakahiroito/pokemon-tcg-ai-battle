@@ -23,6 +23,23 @@ def _energy_on_attackers(player: dict) -> int:
     return sum(total_energy(p) for p in in_play(player))
 
 
+def _attack_ready(player: dict) -> float:
+    """1.0 if the active Pokémon has enough energy attached to fire its cheapest attack."""
+    from .cards import get_db
+    db = get_db()
+    act = active_of(player)
+    if act is None:
+        return 0.0
+    cid = act.get("id")
+    if cid is None:
+        return 0.0
+    attacks = db.attacks_of(cid)
+    if not attacks:
+        return 0.0
+    min_cost = min(ai.cost for ai in attacks)
+    return 1.0 if total_energy(act) >= min_cost else 0.0
+
+
 def evaluate(state: dict, me: int | None = None) -> float:
     """Value of `state` for player `me` (defaults to state.yourIndex)."""
     if state is None:
@@ -78,13 +95,17 @@ def evaluate(state: dict, me: int | None = None) -> float:
     # --- Special conditions: bad on me, good on opponent. ---
     cond = (n_conditions(op) - n_conditions(mp)) * 0.04
 
+    # --- Attack readiness: can the active fire its cheapest attack right now? ---
+    ready = _attack_ready(mp) - _attack_ready(op)
+
     score = (
         2.0 * prize_diff
         + 1.0 * close
         + 0.6 * board
         + 0.5 * safety
-        + 0.25 * energy
-        + 0.15 * hand_adv
+        + 0.3 * energy
+        + 0.25 * hand_adv
+        + 0.3 * ready
         + cond
     )
     # squash into [-1, 1]

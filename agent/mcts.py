@@ -23,7 +23,10 @@ from cg.api import to_observation_class
 
 from . import config as C
 from .determinize import determinize
+import os
 from .policy import choose as policy_choose
+from . import bc_policy
+_BC_ROLLOUT = os.environ.get("BC_ROLLOUT") == "1"  # opt-in: use BC clone as rollout prior
 from .evaluate import evaluate as heuristic_evaluate
 
 
@@ -64,7 +67,8 @@ class MCTS:
             sel = obs.get("select")
             if sel is None:
                 break
-            choice = policy_choose(obs, rng=self.rng, epsilon=self.cfg.ROLLOUT_EPSILON)
+            _pol = bc_policy.choose if (_BC_ROLLOUT and bc_policy.available()) else policy_choose
+            choice = _pol(obs, rng=self.rng, epsilon=self.cfg.ROLLOUT_EPSILON)
             state = _step_dict(sid, choice)
             sid = state["searchId"]
             obs = state["observation"]

@@ -49,3 +49,12 @@ Thumbs.db
 # --- Logs / temp ---
 *.log
 /tmp/
+
+# --- BC training artifacts (large/locked binaries; scripts are committed) ---
+_bc_data*.npz
+_bc_weights*.npz
+_bc_vocab*.pkl
+_policy_OLD.py
+_policy_NEW_backup.py
+_tarcheck/
+result.txt
