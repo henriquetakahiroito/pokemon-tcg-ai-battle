@@ -140,6 +140,18 @@ _JETTING_BLOW    = 1487   # Mega Starmie: 120 + 50 to bench, {W}
 _NEBULA_BEAM     = 1488   # Mega Starmie: 210, unaffected by Weakness/Resistance/effects
 _IGNITION_ENERGY_ID = 17  # provides {C}{C}{C} ONLY on an Evolution Pokémon; on a Basic it
                           # gives just {C} and is discarded at end of turn (wasted)
+# Mega Starmie engine trainers (scored only while piloting the deck — see _starmie_in_play).
+_BUDDY_POFFIN_ID     = 1086  # Item: search 2 Basics (≤70 HP) to bench — Staryu fetcher
+_MEGA_SIGNAL_ID      = 1145  # Item: tutor a Mega Evolution ex (Mega Starmie)
+_SALVATORE_ID        = 1189  # Supporter: search an ability-less evolution (Mega Starmie/Cinderace line)
+_HILDA_ID            = 1225  # Supporter: search an Evolution Pokémon + an Energy
+_POKEGEAR_ID         = 1122  # Item: dig top 7 for a Supporter
+_WALLYS_COMPASSION_ID = 1229  # Supporter: full-heal 1 Mega Evolution ex
+_CRUSHING_HAMMER_ID  = 1120  # Item: coin-flip discard an opponent's energy
+_BOSS_ORDERS_ID      = 1182  # Supporter: gust an opponent's benched Pokémon active
+_HEROS_CAPE_ID       = 1159  # Tool: +100 HP
+_NIGHT_STRETCHER_ID  = 1097  # Item: recover a Pokémon or Basic Energy from discard
+_ULTRA_BALL_ID       = 1121  # Item: discard 2 → search any Pokémon
 
 # Tool IDs that reduce attack energy cost by 1 (Hop's Pokémon only).
 _COST_REDUCE_TOOLS = {_HOPS_CHOICE_BAND_ID}
@@ -227,10 +239,25 @@ def _score_attack(o: dict, state: dict) -> float:
         # The 3-energy bench acceleration is the whole engine. Prioritize it until a Mega
         # Starmie is online and charged; after that, prefer attacking with Mega Starmie.
         return 22.0 if _mega_starmie_ready(state) else 60.0
-    if aid in (_JETTING_BLOW, _NEBULA_BEAM):
-        # Efficient, high-impact attacks — let the general damage branch score them, but
-        # floor them high so the agent commits to Mega Starmie once it's the active.
-        pass
+    # ---- Mega Starmie attack discipline: this is what separates the #1 pilot (Nebula
+    # Beam 644×) from the 594-ELO pilot (Jetting Blow spam). Nebula Beam's 210 is the
+    # reliable default KO button — UNAFFECTED by weakness/resistance/effects (damage
+    # prevention/reduction, Tera walls). Use Jetting Blow only when its cheaper 120
+    # already KOs the active (saves energy + the +50 snipes a benched threat). ----
+    if aid == _NEBULA_BEAM:
+        if op_act is not None:
+            hp = op_act.get("hp", 9999)
+            if 210 >= hp:
+                return 102.0 + 210 / 100.0   # clean, unconditional KO
+            return 78.0 + 210 / 100.0        # heavy reliable chip (no whiff vs walls/effects)
+        return 70.0
+    if aid == _JETTING_BLOW:
+        if my_act and op_act:
+            dmg = attack_damage_estimate(my_act["id"], op_act["id"], 120)
+            if dmg >= op_act.get("hp", 9999):
+                return 103.5 + dmg / 100.0   # efficient KO + bench snipe: best line here
+            return 55.0 + dmg / 10.0         # only chips — Nebula Beam's 210 is preferred
+        return 40.0
 
     if aid == _ANNI_DESTINED:
         # Both active KO'd: great when we trade Slowking (1 prize) into a 2-prize ex / fat wall.
@@ -446,6 +473,165 @@ def _mega_starmie_ready(state: dict) -> bool:
     return False
 
 
+def _mega_starmie_in_play(state: dict) -> bool:
+    mp = my_state(state)
+    for p in [active_of(mp)] + list(mp.get("bench") or []):
+        if p and p.get("id") == _MEGA_STARMIE_ID:
+            return True
+    return False
+
+
+def _mega_starmie_damaged(state: dict) -> bool:
+    mp = my_state(state)
+    for p in [active_of(mp)] + list(mp.get("bench") or []):
+        if p and p.get("id") == _MEGA_STARMIE_ID:
+            if (p.get("hp", 0) or 0) < (p.get("maxHp", 0) or 0):
+                return True
+    return False
+
+
+def _opp_has_energy(state: dict) -> bool:
+    """True if any opponent Pokémon has energy attached (Crushing Hammer has a target)."""
+    op = opp_state(state)
+    for p in [active_of(op)] + list(op.get("bench") or []):
+        if p and total_energy(p) >= 1:
+            return True
+    return False
+
+
+def _opp_bench_ko_available(state: dict) -> bool:
+    """True if an opponent benched Pokémon is worth gusting up for a KO: an ex (2 prizes)
+    or anything Nebula Beam (210) can one-shot. Used to value Boss's Orders."""
+    op = opp_state(state)
+    db = get_db()
+    for b in (op.get("bench") or []):
+        if not b:
+            continue
+        hp = b.get("hp", 9999)
+        try:
+            is_ex = bool(db.card(b.get("id")).ex)
+        except Exception:
+            is_ex = False
+        if hp <= 210 and (is_ex or hp <= 130):
+            return True
+    return False
+
+
+def _hand_ids(state: dict) -> list:
+    mp = my_state(state)
+    return [(h or {}).get("id") for h in (mp.get("hand") or []) if h]
+
+
+def _have_energy_in_hand(state: dict) -> bool:
+    db = get_db()
+    return any(db.is_energy(i) for i in _hand_ids(state) if i is not None)
+
+
+def _active_is_staryu(state: dict) -> bool:
+    return (active_of(my_state(state)) or {}).get("id") == _STARYU_ID
+
+
+def _staryu_in_play(state: dict) -> bool:
+    mp = my_state(state)
+    return any((p or {}).get("id") == _STARYU_ID
+               for p in [active_of(mp)] + list(mp.get("bench") or []))
+
+
+def _pokemon_in_play_count(state: dict) -> int:
+    mp = my_state(state)
+    n = 1 if active_of(mp) else 0
+    return n + sum(1 for b in (mp.get("bench") or []) if b)
+
+
+def _opp_main_attacker(state: dict) -> dict | None:
+    """Opponent Pokémon carrying the most energy — their main attacker (Crushing Hammer target)."""
+    op = opp_state(state)
+    best, best_e = None, -1
+    for p in [active_of(op)] + list(op.get("bench") or []):
+        if p and total_energy(p) > best_e:
+            best, best_e = p, total_energy(p)
+    return best if best_e >= 1 else None
+
+
+def _boss_two_prize_with_jetting(state: dict) -> bool:
+    """True if gusting an opponent's benched ex (2 prizes) into the Active Spot lets Jetting
+    Blow's 120 (with Weakness) KO it this turn — Boss's Orders converts to 2 prizes."""
+    db = get_db()
+    mp = my_state(state)
+    op = opp_state(state)
+    attacker = next((p for p in [active_of(mp)] + list(mp.get("bench") or [])
+                     if p and p.get("id") == _MEGA_STARMIE_ID), None)
+    atk_id = attacker.get("id") if attacker else _MEGA_STARMIE_ID
+    for b in (op.get("bench") or []):
+        if not b:
+            continue
+        try:
+            is_ex = bool(db.card(b.get("id")).ex)
+        except Exception:
+            is_ex = False
+        if not is_ex:
+            continue
+        dmg = attack_damage_estimate(atk_id, b.get("id"), 120)
+        if dmg >= b.get("hp", 9999):
+            return True
+    return False
+
+
+def _starmie_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
+    """Bespoke play priorities for the Mega Starmie engine, per explicit rules. Returns None
+    to fall through to the generic scorer. Only consulted when _starmie_in_play."""
+    has_mega = _mega_starmie_in_play(state)
+    turn = state.get("turn", 99)
+
+    # Salvatore: the aggressive 2nd-player opening — going SECOND on turn 1 (you may attack)
+    # with a Staryu active, search the evolution to evolve Staryu -> Mega Starmie, energize,
+    # then attack (Jetting Blow / Nebula Beam per the attack-discipline scorer). Going FIRST
+    # you cannot attack T1, so it's only the normal evolution search there.
+    if cid == _SALVATORE_ID:
+        fp = state.get("firstPlayer", -1)
+        going_second = (fp is not None and fp >= 0 and fp != state.get("yourIndex"))
+        if turn <= 2 and going_second and _active_is_staryu(state) and not has_mega:
+            return 30.0
+        return 12.0 if _staryu_in_play(state) and not has_mega else 7.0
+
+    # Mega Signal: tutor the main attacker (Mega Starmie) whenever we don't have one.
+    if cid == _MEGA_SIGNAL_ID:
+        return 18.0 if not has_mega else 4.0
+
+    # Buddy-Buddy Poffin: develop the board when we have 2 or fewer Pokémon in play.
+    if cid == _BUDDY_POFFIN_ID:
+        return 16.0 if _pokemon_in_play_count(state) <= 2 else 5.0
+
+    # Hilda: search Evolution + Energy — exactly when we can evolve a Staryu but have no
+    # energy in hand to power the resulting Mega Starmie.
+    if cid == _HILDA_ID:
+        if _staryu_in_play(state) and not has_mega and not _have_energy_in_hand(state):
+            return 17.0
+        return 8.0
+
+    # Boss's Orders: gust only when it converts to 2 prizes via Jetting Blow on a benched ex.
+    if cid == _BOSS_ORDERS_ID:
+        return 16.0 if _boss_two_prize_with_jetting(state) else 4.0
+
+    # Crushing Hammer: fire EVERY time the opponent has energy to strip (target chosen below).
+    if cid == _CRUSHING_HAMMER_ID:
+        return 13.0 if _opp_has_energy(state) else 1.0
+
+    # Hero's Cape: +100 HP — always wants to sit on a Mega Starmie or a Staryu (future Starmie).
+    if cid == _HEROS_CAPE_ID:
+        return 12.0 if (has_mega or _staryu_in_play(state)) else 3.0
+
+    if cid == _POKEGEAR_ID:
+        return 8.0 + max(0, 5 - hand_n)
+    if cid == _WALLYS_COMPASSION_ID:
+        return 13.0 if _mega_starmie_damaged(state) else 1.0
+    if cid == _NIGHT_STRETCHER_ID:
+        return 8.0
+    if cid == _ULTRA_BALL_ID:
+        return 11.0 if not has_mega else 6.0
+    return None
+
+
 def _opp_uses_effect_damage(state: dict) -> bool:
     """True if opponent's active Pokémon's best attack deals 0 direct damage (effect-based).
 
@@ -481,6 +667,12 @@ def _score_play(o: dict, state: dict) -> float:
     if ct is None:
         return 5.0
     name = ct.name
+    # Mega Starmie engine: bespoke trainer priorities (guarded so Hops/Dragapult/Slowking
+    # decks, which share some of these IDs, keep their generic scoring).
+    if _starmie_in_play(state):
+        s = _starmie_play_score(cid, state, hand_n, bench_n)
+        if s is not None:
+            return s
     if name == "POKEMON":
         if cid == _LILLIE_CLEFAIRY_EX_ID:
             # Only bench Clefairy when a Dragon threat is visible — she's 190 HP 2-prize
@@ -564,6 +756,25 @@ def _score_attach(o: dict, state: dict) -> float:
     mp = my_state(state)
     in_play_area = o.get("inPlayArea")
     in_play_idx = o.get("inPlayIndex")
+
+    def _attach_target():
+        if in_play_area == 4:
+            return active_of(mp)
+        if in_play_area == 5:
+            bench = mp.get("bench") or []
+            if in_play_idx is not None and 0 <= in_play_idx < len(bench):
+                return bench[in_play_idx]
+        return None
+
+    # ---- Hero's Cape (+100 HP): only ever wants a Mega Starmie, else a Staryu (future Starmie).
+    if _card_id_from_option(o, state) == _HEROS_CAPE_ID:
+        tgt = _attach_target()
+        tid = (tgt or {}).get("id")
+        if tid == _MEGA_STARMIE_ID:
+            return 30.0
+        if tid == _STARYU_ID:
+            return 18.0
+        return -5.0  # never cape anything else
 
     # ---- Ignition Energy: only worth attaching to an EVOLUTION Pokémon (3 energy).
     # On a Basic it provides 1 energy and is discarded end of turn = wasted. ----
@@ -655,6 +866,11 @@ def _score_ability(o: dict, state: dict) -> float:
             return 14.0  # good refill
         return 10.0     # useful but not urgent
 
+    # Cinderace: use its ability every time it's available (the Turbo Flare / Explosiveness
+    # accel engine is the whole deck). Top ability priority.
+    if cid == _CINDERACE_ID:
+        return 30.0
+
     # Snorlax "Extra Helpings" is passive — it shouldn't appear as an activatable option.
     # All other abilities: default high priority.
     return 10.0
@@ -694,9 +910,24 @@ def _score_yesno(o: dict, ctx: int) -> float:
     return 1.0 if is_yes else 0.0
 
 
+def _score_opp_energy_target(o: dict, state: dict):
+    """When discarding an opponent's energy (Crushing Hammer), strip their MAIN ATTACKER —
+    the Pokémon carrying the most energy. Returns a score, or None if not an opp-energy target."""
+    pi = o.get("playerIndex")
+    if pi is None or pi == state.get("yourIndex"):
+        return None
+    poke = _get_pokemon_from_option(o, state)
+    if poke is None:
+        return 10.0
+    return 10.0 + total_energy(poke) * 5.0  # more energy on it = higher priority (main attacker)
+
+
 def _score_card_select(o: dict, ctx: int, state: dict) -> float:
     """Generic card-target scoring for the many CARD contexts."""
     db = get_db()
+    opp_e = _score_opp_energy_target(o, state)
+    if opp_e is not None and o.get("type") in (OptionType.ENERGY_CARD.value, OptionType.ENERGY.value):
+        return opp_e
     cid = _card_id_from_option(o, state)
 
     # ---- Active/Bench attacker selection (phase-aware for Hops deck) ----
@@ -831,7 +1062,8 @@ def option_scores(obs: dict) -> list[float]:
         elif t in (OptionType.CARD.value, OptionType.TOOL_CARD.value, OptionType.ENERGY_CARD.value):
             s = _score_card_select(o, ctx, state)
         elif t == OptionType.ENERGY.value:
-            s = 5.0
+            opp_e = _score_opp_energy_target(o, state)
+            s = opp_e if opp_e is not None else 5.0
         elif t == OptionType.NUMBER.value:
             s = float(o.get("number") or 0)
         elif t == OptionType.SPECIAL_CONDITION.value:
