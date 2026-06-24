@@ -90,9 +90,13 @@ _HOPS_CRAMORANT_ID    = 311   # Fickle Spitting: 120 dmg, only at opp 3-4 prizes
 _HOPS_PHANTUMP_ID     = 878   # Splashing Dodge: 10 dmg + protection flip (early game)
 _HOPS_TREVENANT_ID    = 879   # Horrifying Revenge / Corner (post-KO revenge attacker)
 _HOPS_SNORLAX_ID      = 304   # bench ability "Extra Helpings": Hop's attacks +30 (no stack)
+_DUNSPARCE_ID         = 65    # Basic; evolves into Dudunsparce
 _DUDUNSPARCE_ID       = 66    # bench ability "Run Away Draw": draw 3 then bounce to deck
+_POKE_PAD_ID          = 1152  # Item: search a non-Rule-Box Pokémon to hand (Dudunsparce/Snorlax)
 _HOPS_CHOICE_BAND_ID  = 1171  # tool: -1 energy cost AND +30 dmg, Hop's only
 _BROCKS_SCOUTING_ID   = 1210  # supporter: search 2 basics OR 1 evolution to hand
+_MEOWTH_EX_ID         = 1071  # Basic ex: on bench-play, Last-Ditch Catch = search a Supporter
+                              # to hand (consistency tutor). 2-prize bait → keep on bench.
 
 # Attack IDs for Hops Pokémon
 _FICKLE_SPITTING     = 433   # Cramorant 120 dmg, conditional
@@ -152,6 +156,22 @@ _BOSS_ORDERS_ID      = 1182  # Supporter: gust an opponent's benched Pokémon ac
 _HEROS_CAPE_ID       = 1159  # Tool: +100 HP
 _NIGHT_STRETCHER_ID  = 1097  # Item: recover a Pokémon or Basic Energy from discard
 _ULTRA_BALL_ID       = 1121  # Item: discard 2 → search any Pokémon
+
+# ---- Mega Lucario ex deck (Fighting; structurally Hops-like: cheap engine attack + big
+# finisher + damage modifiers + a built-in gust). Weak to Psychic. ----
+_RIOLU_ID            = 677
+_MEGA_LUCARIO_ID     = 678   # Stage 1, 340 HP, weak {P}
+_AURA_JAB            = 982   # {F} 130 + attach up to 3 Basic {F} from discard to bench (engine)
+_MEGA_BRAVE          = 983   # {F}{F} 270, can't be used the following turn (finisher)
+_FIRE_ENERGY_ID      = 6     # Basic {F} Energy
+_HARIYAMA_ID         = 674   # ability on evolve: gust opp's benched active (built-in Boss's)
+_LUNATONE_ID         = 675   # ability Lunar Cycle: discard {F} → draw 3 (needs Solrock)
+_SOLROCK_ID          = 676
+_PREMIUM_POWER_PRO_ID = 1141  # Item: {F} attacks do +30 to the Active this turn
+_FIGHTING_GONG_ID    = 1142  # Item: search a Basic {F} Energy or Basic {F} Pokémon
+_CARMINE_ID          = 1192  # Supporter: (going first, T1 usable) discard hand, draw 5
+_DUSK_BALL_ID        = 1102  # Item: look at bottom 7, take a Pokémon
+_GRAVITY_MOUNTAIN_ID = 1252  # Stadium: every Stage 2 in play gets -30 HP
 
 # Tool IDs that reduce attack energy cost by 1 (Hop's Pokémon only).
 _COST_REDUCE_TOOLS = {_HOPS_CHOICE_BAND_ID}
@@ -258,6 +278,25 @@ def _score_attack(o: dict, state: dict) -> float:
                 return 103.5 + dmg / 100.0   # efficient KO + bench snipe: best line here
             return 55.0 + dmg / 10.0         # only chips — Nebula Beam's 210 is preferred
         return 40.0
+
+    # ---- Mega Lucario attack discipline (Hops-like): Aura Jab is the cheap repeatable
+    # engine (130 + accelerate 3 Fire from discard to the bench, no cooldown); Mega Brave
+    # is the 270 finisher you save for what Aura Jab can't KO (and it locks itself next turn).
+    if aid == _AURA_JAB:
+        if my_act and op_act:
+            dmg = attack_damage_estimate(my_act["id"], op_act["id"], 130)
+            if dmg >= op_act.get("hp", 9999):
+                return 104.0 + dmg / 100.0   # cheap KO + bench accel + no cooldown = best line
+            accel = 18.0 if _lucario_accel_useful(state) else 0.0
+            return 50.0 + dmg / 10.0 + accel
+        return 45.0
+    if aid == _MEGA_BRAVE:
+        if my_act and op_act:
+            dmg = attack_damage_estimate(my_act["id"], op_act["id"], 270)
+            if dmg >= op_act.get("hp", 9999):
+                return 102.0 + dmg / 100.0   # the finisher: use when Aura Jab's 130 can't KO
+            return 60.0 + dmg / 10.0
+        return 55.0
 
     if aid == _ANNI_DESTINED:
         # Both active KO'd: great when we trade Slowking (1 prize) into a 2-prize ex / fat wall.
@@ -577,6 +616,100 @@ def _boss_two_prize_with_jetting(state: dict) -> bool:
     return False
 
 
+def _boss_ko_target_available(state: dict) -> int:
+    """Boss's Orders gusts an opponent's benched Pokémon active. Return the prize value
+    (2 for an ex, 1 otherwise) of the most valuable benched target our ACTIVE attacker
+    could KO this turn if it were dragged up; 0 if there is no KO target."""
+    db = get_db()
+    mp = my_state(state)
+    op = opp_state(state)
+    act = active_of(mp)
+    if not act:
+        return 0
+    a = db.best_attack(act.get("id"))
+    if not a or a.damage <= 0:
+        return 0
+    bonus = _hops_dmg_bonus(act, state)
+    try:
+        attacker_psychic = db.card(act.get("id")).energyType == _PSYCHIC_ENERGY_TYPE
+    except Exception:
+        attacker_psychic = False
+    best = 0
+    for b in (op.get("bench") or []):
+        if not b:
+            continue
+        dmg = attack_damage_estimate(act.get("id"), b.get("id"), a.damage + bonus)
+        # Fairy Zone: once gusted active, a Dragon target is 2× to our Psychic attacker.
+        if attacker_psychic and _fairy_zone_active(state):
+            try:
+                if db.card(b.get("id")).energyType == _DRAGON_ENERGY_TYPE:
+                    dmg *= 2
+            except Exception:
+                pass
+        if dmg >= b.get("hp", 9999):
+            try:
+                is_ex = bool(db.card(b.get("id")).ex)
+            except Exception:
+                is_ex = False
+            best = max(best, 2 if is_ex else 1)
+    return best
+
+
+def _hops_in_play(state: dict) -> bool:
+    """True if we're piloting the Hops shell (any Hop's Pokémon / Dunsparce line in play)."""
+    mp = my_state(state)
+    ids = {(active_of(mp) or {}).get("id")}
+    ids.update((b or {}).get("id") for b in (mp.get("bench") or []))
+    return bool(ids & {_DUNSPARCE_ID, _DUDUNSPARCE_ID, _HOPS_PHANTUMP_ID,
+                       _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID, _HOPS_SNORLAX_ID})
+
+
+def _has_in_play(state: dict, cid: int) -> bool:
+    mp = my_state(state)
+    return any((p or {}).get("id") == cid for p in [active_of(mp)] + list(mp.get("bench") or []))
+
+
+def _snorlax_completes_ko(state: dict) -> bool:
+    """True if we have no Snorlax in play and its +30 'Extra Helpings' buff would turn our
+    Hop's active's attack from non-lethal into a KO on the opponent's active."""
+    db = get_db()
+    if _has_in_play(state, _HOPS_SNORLAX_ID):
+        return False
+    mp = my_state(state)
+    op = opp_state(state)
+    act = active_of(mp)
+    oa = active_of(op)
+    if not act or not oa or not db.name(act.get("id", 0)).startswith("Hop's"):
+        return False
+    a = db.best_attack(act.get("id"))
+    if not a or a.damage <= 0:
+        return False
+    bonus = _hops_dmg_bonus(act, state)
+    hp = oa.get("hp", 9999)
+    cur = attack_damage_estimate(act["id"], oa["id"], a.damage + bonus)
+    withlax = attack_damage_estimate(act["id"], oa["id"], a.damage + bonus + 30)
+    return cur < hp <= withlax
+
+
+def _score_poke_pad(state: dict) -> float:
+    """Poké Pad fetches a non-Rule-Box Pokémon. Prioritize it when it grabs the piece we
+    need now: Dudunsparce (to evolve a Dunsparce → draw engine) or a Snorlax (whose +30
+    completes a KO this turn). Otherwise it's a normal consistency item."""
+    if not _hops_in_play(state):
+        return 7.0
+    if _has_in_play(state, _DUNSPARCE_ID) and _DUDUNSPARCE_ID not in _hand_ids(state):
+        return 13.0  # fetch Dudunsparce to get the draw engine online
+    if _snorlax_completes_ko(state):
+        return 13.0  # fetch a Snorlax — its +30 turns this turn's attack into a KO
+    return 7.0
+
+
+def _score_boss_orders(state: dict) -> float:
+    """Play Boss's Orders only when it sets up a KO — prefer dragging a 2-prize ex."""
+    v = _boss_ko_target_available(state)
+    return 12.0 + 4.0 * v if v > 0 else 4.0
+
+
 def _starmie_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
     """Bespoke play priorities for the Mega Starmie engine, per explicit rules. Returns None
     to fall through to the generic scorer. Only consulted when _starmie_in_play."""
@@ -609,9 +742,11 @@ def _starmie_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
             return 17.0
         return 8.0
 
-    # Boss's Orders: gust only when it converts to 2 prizes via Jetting Blow on a benched ex.
+    # Boss's Orders: gust when it sets up a KO (2-prize ex via Jetting Blow is best).
     if cid == _BOSS_ORDERS_ID:
-        return 16.0 if _boss_two_prize_with_jetting(state) else 4.0
+        if _boss_two_prize_with_jetting(state):
+            return 20.0
+        return _score_boss_orders(state)
 
     # Crushing Hammer: fire EVERY time the opponent has energy to strip (target chosen below).
     if cid == _CRUSHING_HAMMER_ID:
@@ -629,6 +764,82 @@ def _starmie_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
         return 8.0
     if cid == _ULTRA_BALL_ID:
         return 11.0 if not has_mega else 6.0
+    return None
+
+
+def _lucario_in_play(state: dict) -> bool:
+    """True if we're piloting the Mega Lucario deck (Riolu / Mega Lucario in play)."""
+    mp = my_state(state)
+    return any((p or {}).get("id") in (_RIOLU_ID, _MEGA_LUCARIO_ID)
+               for p in [active_of(mp)] + list(mp.get("bench") or []))
+
+
+def _lucario_accel_useful(state: dict) -> bool:
+    """Aura Jab attaches up to 3 Basic {F} from DISCARD to the bench — useful only when we
+    have Fire energy in the discard AND a benched Pokémon that still needs energy."""
+    db = get_db()
+    mp = my_state(state)
+    fire_in_discard = any((c or {}).get("id") == _FIRE_ENERGY_ID for c in (mp.get("discard") or []))
+    if not fire_in_discard:
+        return False
+    for b in (mp.get("bench") or []):
+        if b and _attack_energy_need(b, db) > 0:
+            return True
+    return False
+
+
+def _premium_secures_ko(state: dict) -> bool:
+    """True if Premium Power Pro's +30 turns a non-lethal Mega Lucario attack into a KO on
+    the opponent's active (130->160 Aura Jab, or 270->300 Mega Brave)."""
+    mp = my_state(state)
+    op = opp_state(state)
+    act = active_of(mp)
+    oa = active_of(op)
+    if not act or act.get("id") != _MEGA_LUCARIO_ID or not oa:
+        return False
+    hp = oa.get("hp", 9999)
+    aid = act.get("id")
+    for base in (130, 270):
+        no_boost = attack_damage_estimate(aid, oa.get("id"), base)
+        boosted = attack_damage_estimate(aid, oa.get("id"), base + 30)
+        if no_boost < hp <= boosted:
+            return True
+    return False
+
+
+def _opp_has_stage2(state: dict) -> bool:
+    db = get_db()
+    op = opp_state(state)
+    for p in [active_of(op)] + list(op.get("bench") or []):
+        if not p:
+            continue
+        try:
+            if getattr(db.card(p.get("id")), "stage2", False):
+                return True
+        except Exception:
+            pass
+    return False
+
+
+def _lucario_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
+    """Bespoke play priorities for the Mega Lucario engine. Returns None to fall through."""
+    act = active_of(my_state(state))
+    lucario_active = bool(act and act.get("id") == _MEGA_LUCARIO_ID)
+    if cid == _PREMIUM_POWER_PRO_ID:
+        # One-shot +30 this turn: play it only to convert an attack into a KO.
+        return 16.0 if _premium_secures_ko(state) else (3.0 if lucario_active else 1.0)
+    if cid == _FIGHTING_GONG_ID:
+        return 9.0                                  # search {F} energy / basic — consistency
+    if cid == _DUSK_BALL_ID:
+        return 8.0                                  # dig a Pokémon
+    if cid == _CARMINE_ID:
+        fp = state.get("firstPlayer", -1)
+        going_first = (fp is not None and fp >= 0 and fp == state.get("yourIndex"))
+        if going_first and state.get("turn", 99) <= 2:
+            return 15.0                             # strong T1 going-first dig (draw 5)
+        return 9.0 + max(0, 6 - hand_n)
+    if cid == _GRAVITY_MOUNTAIN_ID:
+        return 11.0 if _opp_has_stage2(state) else 5.0  # shrink opp Stage 2s (Dragapult/Walrein)
     return None
 
 
@@ -673,6 +884,10 @@ def _score_play(o: dict, state: dict) -> float:
         s = _starmie_play_score(cid, state, hand_n, bench_n)
         if s is not None:
             return s
+    if _lucario_in_play(state):
+        s = _lucario_play_score(cid, state, hand_n, bench_n)
+        if s is not None:
+            return s
     if name == "POKEMON":
         if cid == _LILLIE_CLEFAIRY_EX_ID:
             # Only bench Clefairy when a Dragon threat is visible — she's 190 HP 2-prize
@@ -682,8 +897,15 @@ def _score_play(o: dict, state: dict) -> float:
             if _opp_has_dragon_threat(state):
                 return 8.0   # Dragon line on bench: prepare before it comes active
             return -2.0      # No Dragon in sight: never waste a bench slot on her
+        # Meowth ex: play to bench EARLY — its Last-Ditch Catch tutors a Supporter to hand
+        # (big consistency). Once it's down the ability is spent, so prioritize the first drop.
+        if cid == _MEOWTH_EX_ID:
+            return 14.0 if bench_n < 5 else -1.0
         return 12.0 - 2.0 * bench_n if bench_n < 5 else -1.0
     if name == "SUPPORTER":
+        # Boss's Orders: play it only when it gusts up a benched target we can KO this turn.
+        if cid == _BOSS_ORDERS_ID:
+            return _score_boss_orders(state)
         if cid == _XEROSIC_ID:
             op_hand = op.get("handCount", 0)
             if op_hand > 3:
@@ -703,6 +925,8 @@ def _score_play(o: dict, state: dict) -> float:
             return 9.0
         return 9.0 + max(0, 6 - hand_n)
     if name == "ITEM":
+        if cid == _POKE_PAD_ID:
+            return _score_poke_pad(state)
         # Secret Box: fetch Item+Tool+Supporter+Stadium in one card — huge tempo swing.
         # Cost is discarding 3 cards, so only worth it when hand has enough to spare.
         if cid == _SECRET_BOX_ID:
@@ -770,10 +994,10 @@ def _score_attach(o: dict, state: dict) -> float:
     if _card_id_from_option(o, state) == _HEROS_CAPE_ID:
         tgt = _attach_target()
         tid = (tgt or {}).get("id")
-        if tid == _MEGA_STARMIE_ID:
-            return 30.0
-        if tid == _STARYU_ID:
-            return 18.0
+        if tid in (_MEGA_STARMIE_ID, _MEGA_LUCARIO_ID):
+            return 30.0   # +100 HP on the main attacker wall (330->430 / 340->440)
+        if tid in (_STARYU_ID, _RIOLU_ID):
+            return 18.0   # or its pre-evolution (future main attacker)
         return -5.0  # never cape anything else
 
     # ---- Ignition Energy: only worth attaching to an EVOLUTION Pokémon (3 energy).
@@ -871,6 +1095,16 @@ def _score_ability(o: dict, state: dict) -> float:
     if cid == _CINDERACE_ID:
         return 30.0
 
+    # Lunatone "Lunar Cycle": discard a {F} energy to draw 3 (engine only offers it when
+    # Solrock is in play + a Fire energy is discardable). Strong refill — scale with hand.
+    if cid == _LUNATONE_ID:
+        hand_n = mp.get("handCount", 0)
+        if hand_n <= 2:
+            return 16.0
+        if hand_n <= 4:
+            return 12.0
+        return 8.0
+
     # Snorlax "Extra Helpings" is passive — it shouldn't appear as an activatable option.
     # All other abilities: default high priority.
     return 10.0
@@ -940,6 +1174,10 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
 
             # Dudunsparce: bench-only draw engine. Never send active unless no other choice.
             if cid == _DUDUNSPARCE_ID:
+                return 1.0
+
+            # Meowth ex: bench-only consistency tutor — 170 HP 2-prize bait if sent active.
+            if cid == _MEOWTH_EX_ID:
                 return 1.0
 
             # Lillie's Clefairy ex: bench-only for Fairy Zone ability. 190 HP = 2-prize bait
