@@ -97,6 +97,12 @@ _HOPS_CHOICE_BAND_ID  = 1171  # tool: -1 energy cost AND +30 dmg, Hop's only
 _BROCKS_SCOUTING_ID   = 1210  # supporter: search 2 basics OR 1 evolution to hand
 _MEOWTH_EX_ID         = 1071  # Basic ex: on bench-play, Last-Ditch Catch = search a Supporter
                               # to hand (consistency tutor). 2-prize bait → keep on bench.
+# Supporters that shuffle/discard your HAND then draw — must be played AFTER your items,
+# never before, or you shuffle your own setup away.
+_LILLIE_DET_ID        = 1227  # Lillie's Determination: shuffle hand → draw 6 (8 at 6 prizes)
+_JUDGE_ID             = 1213  # Judge: both players shuffle hand → draw 4
+_HARLEQUIN_ID         = 1223  # Harlequin: shuffle hand → flip, draw 5/3
+_HAND_SHUFFLE_DRAWS   = {_LILLIE_DET_ID, _JUDGE_ID, _HARLEQUIN_ID}
 
 # Attack IDs for Hops Pokémon
 _FICKLE_SPITTING     = 433   # Cramorant 120 dmg, conditional
@@ -710,6 +716,30 @@ def _score_boss_orders(state: dict) -> float:
     return 12.0 + 4.0 * v if v > 0 else 4.0
 
 
+def _score_hand_shuffle_draw(state: dict) -> float:
+    """Lillie's Determination / Judge / Harlequin shuffle your HAND into the deck, then draw.
+    Play them ONLY after you've used your items (and benched your basics) — otherwise they
+    shuffle your own setup away. Low while actionable cards remain; high to refill a spent hand."""
+    db = get_db()
+    actionable = 0
+    for i in _hand_ids(state):
+        if i is None:
+            continue
+        ct = db.card_type(i)
+        nm = ct.name if ct else ""
+        if nm == "ITEM":
+            actionable += 1                       # play items first
+        elif nm == "POKEMON":
+            try:
+                if db.card(i).basic:
+                    actionable += 1               # bench your basics first
+            except Exception:
+                pass
+    if actionable > 0:
+        return 2.5    # below items (7): items / bench development go first
+    return 13.0       # hand is spent — refill now (and it's good when the hand is clogged)
+
+
 def _starmie_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
     """Bespoke play priorities for the Mega Starmie engine, per explicit rules. Returns None
     to fall through to the generic scorer. Only consulted when _starmie_in_play."""
@@ -906,6 +936,9 @@ def _score_play(o: dict, state: dict) -> float:
         # Boss's Orders: play it only when it gusts up a benched target we can KO this turn.
         if cid == _BOSS_ORDERS_ID:
             return _score_boss_orders(state)
+        # Lillie's Determination / Judge / Harlequin: play AFTER items (they shuffle your hand).
+        if cid in _HAND_SHUFFLE_DRAWS:
+            return _score_hand_shuffle_draw(state)
         if cid == _XEROSIC_ID:
             op_hand = op.get("handCount", 0)
             if op_hand > 3:
