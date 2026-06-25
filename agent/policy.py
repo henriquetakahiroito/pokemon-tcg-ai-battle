@@ -46,8 +46,17 @@ def _card_id_from_option(o: dict, state: dict) -> int | None:
     area = o.get("area")
     idx = o.get("index")
     pi = o.get("playerIndex")
-    if area is None or idx is None:
+    if idx is None:
         return None
+    # PLAY options reference a card in the acting player's HAND by index alone (no `area`
+    # field). Without this, EVERY hand-play resolved to None and fell back to a flat 5.0,
+    # silently disabling all bespoke play scoring (Boss's Orders, Crushing Hammer, Lillie's
+    # sequencing, Clefairy/Meowth gating, Mega Signal, Salvatore, ...).
+    if area is None:
+        if o.get("type") == OptionType.PLAY.value:
+            area = 2  # HAND
+        else:
+            return None
     try:
         player = state["players"][pi if pi is not None else state["yourIndex"]]
     except (KeyError, IndexError, TypeError):
@@ -251,6 +260,11 @@ def _score_attack(o: dict, state: dict) -> float:
     if my_act and my_act.get("id") in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
         return -500.0
 
+    # Meowth ex must NEVER attack — it is a consistency tutor only (Last-Ditch Catch fetches
+    # a Supporter when bricked / to grab Boss's Orders for a gust). Retreat it if stuck Active.
+    if my_act and my_act.get("id") == _MEOWTH_EX_ID:
+        return -500.0
+
     # ---- Slowking combo: copied-attack valuation ----
     # These attacks (Seek Inspiration's copy targets) carry their damage in effect text,
     # so the DB damage field is 0 and the generic scorer would undervalue them badly.
@@ -265,11 +279,27 @@ def _score_attack(o: dict, state: dict) -> float:
         # Phantom Dive used via the Mimikyu copy: fall through to the general scorer below so
         # the Fairy Zone ×2 (Slowking is Psychic vs Dragon) and KO detection apply.
         pass
-    # ---- Mega Starmie deck: value Turbo Flare's accel engine (DB scores it as just 50 dmg) ----
+    # ---- Cinderace = ACCEL engine, NOT the attacker. The #1 pilot (keidroid) uses Turbo
+    # Flare only 2-3× early to bank energy onto a benched Mega Starmie, then attacks with
+    # Starmie. Our agent was mashing Turbo Flare 30× (vs 16 Starmie attacks) because the old
+    # flat 60 outranked evolving Staryu->Mega Starmie (~12) and charging it — so Starmie never
+    # assembled. Turbo Flare must score BELOW advancing the Starmie line. ----
     if aid == _TURBO_FLARE:
-        # The 3-energy bench acceleration is the whole engine. Prioritize it until a Mega
-        # Starmie is online and charged; after that, prefer attacking with Mega Starmie.
-        return 22.0 if _mega_starmie_ready(state) else 60.0
+        # The #1 pilots (keidroid, Yushin Ito 69-10) Turbo Flare only ~0.3×/game — Cinderace
+        # is pure accel, not the attacker. Turbo Flare ENDS the turn, so it must score BELOW
+        # every setup play (Mega Signal 18, Salvatore 30/12, Hilda 17, Poffin 16, evolve,
+        # attach, draw) so the agent develops Staryu->Mega Starmie + charges it FIRST, then
+        # Turbo Flares only as the idle terminal action. A flat 40 here was ending turns before
+        # setup and capping our setup rate ~33% vs Yushin's ~76% on the SAME deck.
+        mp_ = my_state(state)
+        megas = [p for p in [active_of(mp_)] + list(mp_.get("bench") or [])
+                 if p and p.get("id") == _MEGA_STARMIE_ID]
+        # A Mega Starmie with >=3 energy can Nebula Beam: STOP acceling, bring it active.
+        if any(total_energy(p) >= 3 for p in megas):
+            return 4.0
+        # Low fallback: above END(3) so we still accel when idle, but below all setup/draw
+        # plays so it never preempts assembling the Starmie line.
+        return 7.0
     # ---- Mega Starmie attack discipline: this is what separates the #1 pilot (Nebula
     # Beam 644×) from the 594-ELO pilot (Jetting Blow spam). Nebula Beam's 210 is the
     # reliable default KO button — UNAFFECTED by weakness/resistance/effects (damage
@@ -575,6 +605,18 @@ def _hand_ids(state: dict) -> list:
 def _have_energy_in_hand(state: dict) -> bool:
     db = get_db()
     return any(db.is_energy(i) for i in _hand_ids(state) if i is not None)
+
+
+def _hand_has_supporter(state: dict) -> bool:
+    """True if any Supporter is already in hand (so we can advance without Meowth's tutor)."""
+    db = get_db()
+    for i in _hand_ids(state):
+        if i is None:
+            continue
+        ct = db.card_type(i)
+        if ct is not None and ct.name == "SUPPORTER":
+            return True
+    return False
 
 
 def _active_is_staryu(state: dict) -> bool:
@@ -925,17 +967,28 @@ def _score_play(o: dict, state: dict) -> float:
             return s
     if name == "POKEMON":
         if cid == _LILLIE_CLEFAIRY_EX_ID:
-            # Only bench Clefairy when a Dragon threat is visible — she's 190 HP 2-prize
-            # bait with no attack value vs non-Dragon opponents.
+            # NEVER play Clefairy unless the opponent has a Dragon-type in play — her ONLY
+            # value is Fairy Zone (Dragon → Psychic weakness). Vs a non-Dragon opponent she
+            # is dead weight: 190 HP 2-prize bait with no attack. Hard-block her.
             if _opp_active_is_dragon(state):
                 return 16.0  # Dragon active now: bench immediately, Fairy Zone live
             if _opp_has_dragon_threat(state):
                 return 8.0   # Dragon line on bench: prepare before it comes active
-            return -2.0      # No Dragon in sight: never waste a bench slot on her
-        # Meowth ex: play to bench EARLY — its Last-Ditch Catch tutors a Supporter to hand
-        # (big consistency). Once it's down the ability is spent, so prioritize the first drop.
+            return -500.0    # No Dragon anywhere: never put her down
+        # Meowth ex: ONLY play it for a reason — its Last-Ditch Catch tutors a Supporter on
+        # bench-play. Use it (a) when the hand is bricked (no Supporter to advance the turn),
+        # or (b) to fetch Boss's Orders when we need a gust to set up a KO. Never as a generic
+        # early bench drop (it's a 170 HP 2-prize liability sitting there). It never attacks.
         if cid == _MEOWTH_EX_ID:
-            return 14.0 if bench_n < 5 else -1.0
+            if bench_n >= 5:
+                return -1.0
+            need_supporter = not _hand_has_supporter(state)
+            need_gust = _opp_bench_ko_available(state) and (_BOSS_ORDERS_ID not in _hand_ids(state))
+            if need_supporter:
+                return 15.0   # bricked: tutor any Supporter to keep the turn going
+            if need_gust:
+                return 14.0   # fetch Boss's Orders to gust a benched KO target
+            return -2.0       # have what we need: don't waste the ex on the bench
         return 12.0 - 2.0 * bench_n if bench_n < 5 else -1.0
     if name == "SUPPORTER":
         # Boss's Orders: play it only when it gusts up a benched target we can KO this turn.
@@ -1129,6 +1182,20 @@ def _score_retreat(state: dict) -> float:
         if any(b and (b or {}).get("id") in (_HOPS_PHANTUMP_ID, _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID)
                for b in bench):
             return 9.0
+
+    # Mega Starmie PROMOTION: the #1 pilots (Yushin Ito 69-10, keidroid) transition off
+    # Cinderace the moment a Mega Starmie is charged — Cinderace is the accel engine, not the
+    # attacker. If the active is NOT the Starmie but a charged Mega Starmie sits on the bench,
+    # retreat to promote it so it can Nebula/Jetting THIS turn. This is the move our raw
+    # heuristic was missing (it sat on Cinderace Turbo-Flaring instead of swinging Starmie).
+    if act.get("id") != _MEGA_STARMIE_ID:
+        for b in bench:
+            if b and b.get("id") == _MEGA_STARMIE_ID:
+                e = total_energy(b)
+                if e >= 3:
+                    return 26.0   # Nebula online — bring the workhorse in now
+                if e >= 1:
+                    return 16.0   # Jetting-ready — still worth promoting for tempo
     if curr_hp <= 30:
         return 7.0 if bench else 1.0   # very low HP: retreat if possible
     if max_hp > 0 and curr_hp < max_hp * 0.4 and bench_ready:
@@ -1252,10 +1319,11 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
             if cid == _MEOWTH_EX_ID:
                 return 1.0
 
-            # Lillie's Clefairy ex: bench-only for Fairy Zone ability. 190 HP = 2-prize bait
-            # if active; keep on bench to give Dragon Pokémon Psychic weakness.
+            # Lillie's Clefairy ex: bench-ONLY for Fairy Zone ability. 190 HP = 2-prize bait
+            # if active. NEVER promote her to the active — only forced if she is the
+            # literal last Pokémon in play.
             if cid == _LILLIE_CLEFAIRY_EX_ID:
-                return 1.0
+                return -500.0
 
             # Snorlax: bench-only role (Extra Helpings ability). Only send active as last resort.
             if cid == _HOPS_SNORLAX_ID:
@@ -1279,8 +1347,18 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
             if cid == _HOPS_TREVENANT_ID:
                 return 26.0 if our_kos > 0 else 18.0
 
+            # Mega Starmie: when promoting (after a KO or via switch), prefer a charged Mega
+            # Starmie over Cinderace — Cinderace is accel, Starmie is the attacker. A charged
+            # Starmie active = it attacks (Nebula/Jetting) immediately.
+            if cid == _MEGA_STARMIE_ID:
+                mega = next((p for p in [active_of(my_state(state))] + list(my_state(state).get("bench") or [])
+                             if p and p.get("id") == _MEGA_STARMIE_ID), None)
+                e = total_energy(mega) if mega else 0
+                return 40.0 if e >= 3 else (30.0 if e >= 1 else 12.0)
+
             # Cinderace: open it (via Explosiveness) — it's the Turbo Flare accel engine that
-            # powers up the bench Staryu/Mega Starmie. Strongly prefer it over a passive Staryu.
+            # powers up the bench Staryu/Mega Starmie. Prefer it over a passive Staryu, but a
+            # charged Mega Starmie (scored above) should come in ahead of it to attack.
             if cid == _CINDERACE_ID:
                 return 24.0
 
@@ -1291,6 +1369,23 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
         return 5.0
     if ctx in (SelectContext.SETUP_BENCH_POKEMON.value, SelectContext.TO_BENCH.value,
                SelectContext.TO_FIELD.value):
+        # Lillie's Clefairy ex: never field her (even at initial setup) unless the opponent
+        # has a Dragon — same rule as playing her from hand. Without this guard the flat 10
+        # below would bench her vs Alakazam/Hops where she is dead 2-prize bait.
+        if cid == _LILLIE_CLEFAIRY_EX_ID:
+            if _opp_active_is_dragon(state):
+                return 16.0
+            if _opp_has_dragon_threat(state):
+                return 8.0
+            return -500.0
+        # Meowth ex: only field it for the Last-Ditch Catch tutor — when bricked (no Supporter
+        # in hand) or to fetch Boss's Orders for a needed gust. Otherwise keep it in hand.
+        if cid == _MEOWTH_EX_ID:
+            if not _hand_has_supporter(state):
+                return 15.0
+            if _opp_bench_ko_available(state) and (_BOSS_ORDERS_ID not in _hand_ids(state)):
+                return 14.0
+            return -2.0
         return 10.0
 
     # ---- Damage targeting: KO the lowest-HP opponent Pokémon ----

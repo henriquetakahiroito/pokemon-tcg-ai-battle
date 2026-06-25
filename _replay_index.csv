@@ -1,315 +1,469 @@
-episode,p0,p1,my_seat,my_deck,opp_archetype,winner,result_me
-80799945,Henrique Takahiro Ito,Henrique Takahiro Ito,-1,,,Henrique Takahiro Ito,
-80868526,THIRD PTCG Club,foo_foo,-1,,,THIRD PTCG Club,
-80869074,foo_foo,カドラバ Kadoraba,-1,,,foo_foo,
-80869603,foo_foo,tototo,-1,,,foo_foo,
-80870139,TrustHub hiroingk,foo_foo,-1,,,TrustHub hiroingk,
-80870848,LORD DREGS,foo_foo,-1,,,foo_foo,
-80871552,foo_foo,カドラバ Kadoraba,-1,,,foo_foo,
-80872250,foo_foo,TrustHub hiroingk,-1,,,foo_foo,
-80873979,foo_foo,graybackcat,-1,,,graybackcat,
-80880112,The Debauchery Tea Party,TT,-1,,,TT,
-80880657,kglctf,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80880765,foo_foo,vibechu,-1,,,vibechu,
-80881200,The Debauchery Tea Party,persn,-1,,,The Debauchery Tea Party,
-80881899,The Debauchery Tea Party,persn,-1,,,persn,
-80882470,cmoney,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80882493,すーぱーひとで,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80884252,cmoney,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80884971,Stagapult,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80885694,InkCartridge,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80886411,The Debauchery Tea Party,persn,-1,,,The Debauchery Tea Party,
-80887119,The Debauchery Tea Party,THIRD PTCG Club,-1,,,The Debauchery Tea Party,
-80887673,kouki__k_4869,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80888204,The Debauchery Tea Party,THIRD PTCG Club,-1,,,THIRD PTCG Club,
-80888911,TrustHub hiroingk,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80889444,THIRD PTCG Club,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80889993,TrustHub hiroingk,The Debauchery Tea Party,-1,,,TrustHub hiroingk,
-80890510,The Debauchery Tea Party,Stagapult,-1,,,The Debauchery Tea Party,
-80891279,blue0620,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80891993,The Debauchery Tea Party,foo_foo,-1,,,The Debauchery Tea Party,
-80892542,The Debauchery Tea Party,好吃的台灣拉麵,-1,,,The Debauchery Tea Party,
-80893110,Naoki Maeda,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80893837,tototo,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80894375,The Debauchery Tea Party,graybackcat,-1,,,The Debauchery Tea Party,
-80921089,yuya,H.Ito,1,Hops,Hops,H.Ito,1
-80921799,Marron22246,H.Ito,1,Hops,MegaLucario,Marron22246,-1
-80923237,H.Ito,tomatomato,0,Hops,MegaStarmie,H.Ito,1
-80923788,datnt114,H.Ito,1,Hops,MegaLucario,H.Ito,1
-80924497,H.Ito,yatosa,0,Hops,MegaLucario,H.Ito,1
-80925113,H.Ito,knshnb,0,Hops,Alakazam,H.Ito,1
-80925212,H.Ito,トゲアリトゲナシトゲトゲ,0,Hops,Alakazam,H.Ito,1
-80925756,H.Ito,M093.jp,0,Hops,"other:[1227, 1233, 265]",H.Ito,1
-80926284,Stagapult,H.Ito,1,Hops,MegaLucario,Stagapult,-1
-80927001,fujiborozoukin,H.Ito,1,Hops,Alakazam,H.Ito,1
-80927707,DENPA92,H.Ito,1,Hops,Alakazam,H.Ito,1
-80928316,H.Ito,THIRD PTCG Club,0,Hops,Hops,H.Ito,1
-80932931,H.Ito,Wasabi,0,Hops,"other:[1227, 1233, 265]",H.Ito,1
-80934730,H.Ito,Praxel,0,Hops,MegaLucario,Praxel,-1
-80937248,H.Ito,Galza98,0,Hops,MegaLucario,H.Ito,1
-80938141,cogitAI,H.Ito,1,Hops,Alakazam,H.Ito,1
-80938146,InkCartridge,H.Ito,1,Hops,Alakazam,H.Ito,1
-80941551,好吃的台灣拉麵,H.Ito,1,Hops,Hops,H.Ito,1
-80942651,Aditya,H.Ito,1,Hops,Alakazam,H.Ito,1
-80946266,cmoney,H.Ito,1,Hops,MegaLucario,H.Ito,1
-80948325,H.Ito,rinov321,0,Hops,MegaLucario,H.Ito,1
-80950052,H.Ito,トゲアリトゲナシトゲトゲ,0,Hops,Alakazam,H.Ito,1
-80952019,graybackcat,H.Ito,1,Hops,Hops,graybackcat,-1
-80955040,Junichiro Morita,H.Ito,1,Hops,Hops,Junichiro Morita,-1
-80958485,H.Ito,Kyo_s_s,0,Hops,"other:[1227, 1233, 265]",H.Ito,1
-80960133,H.Ito,kawachi,0,Hops,Alakazam,kawachi,-1
-80962363,H.Ito,UBI=ISHI,0,Hops,Alakazam,UBI=ISHI,-1
-80982156,foo_foo,THIRD PTCG Club,-1,,,THIRD PTCG Club,
-80984524,The Debauchery Tea Party,foo_foo,-1,,,The Debauchery Tea Party,
-80985039,H.Ito,H.Ito,0,Hops,Hops,H.Ito,-1
-80985240,THIRD PTCG Club,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80985932,yyou97,H.Ito,1,Hops,Crustle,H.Ito,1
-80986112,foo_foo,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80986116,The Debauchery Tea Party,TrustHub hiroingk,-1,,,The Debauchery Tea Party,
-80986658,H.Ito,Amon Kizawa,0,Hops,Crustle,H.Ito,1
-80986873,The Debauchery Tea Party,Kohenyan,-1,,,The Debauchery Tea Party,
-80986874,THIRD PTCG Club,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80987604,graybackcat,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80988338,Naoki Maeda,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80989071,THIRD PTCG Club,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80989633,THIRD PTCG Club,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-80990376,foo_foo,The Debauchery Tea Party,-1,,,foo_foo,
-80993830,トゲアリトゲナシトゲトゲ,H.Ito,1,Hops,Alakazam,H.Ito,1
-80994575,H.Ito,Aditya,0,Hops,Alakazam,H.Ito,1
-80999391,primal,H.Ito,1,Hops,MegaLucario,H.Ito,1
-81000117,H.Ito,kashiwashira,0,Hops,TR-Spidops,kashiwashira,-1
-81000868,M093.jp,H.Ito,1,Hops,"other:[1227, 1233, 265]",M093.jp,-1
-81012267,foo_foo,好吃的台灣拉麵,-1,,,foo_foo,
-81013548,foo_foo,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81014817,foo_foo,Naoki Maeda,-1,,,Naoki Maeda,
-81016102,foo_foo,shimacos,-1,,,foo_foo,
-81023738,foo_foo,Magnus Artero,-1,,,foo_foo,
-81035625,The Debauchery Tea Party,THIRD PTCG Club,-1,,,The Debauchery Tea Party,
-81035633,The Debauchery Tea Party,Kohenyan,-1,,,The Debauchery Tea Party,
-81047221,foo_foo,Kohenyan,-1,,,foo_foo,
-81055362,The Debauchery Tea Party,THIRD PTCG Club,-1,,,The Debauchery Tea Party,
-81058442,keidroid,foo_foo,-1,,,keidroid,
-81060704,Kendamarron,foo_foo,-1,,,foo_foo,
-81063469,keidroid,foo_foo,-1,,,keidroid,
-81064026,foo_foo,keidroid,-1,,,foo_foo,
-81074382,THIRD PTCG Club,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81079059,H.Ito,Yuta Watanabe,0,Hops,Hops,H.Ito,1
-81083675,kidekikish,H.Ito,1,Hops,Hops,H.Ito,1
-81084960,Kohenyan,foo_foo,-1,,,foo_foo,
-81091518,THIRD PTCG Club,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81095548,hikaru_ishihara46,H.Ito,1,Hops,Alakazam,hikaru_ishihara46,-1
-81098331,Togo,H.Ito,1,Hops,Alakazam,Togo,-1
-81104999,H.Ito,akamiko,0,Hops,Hops,H.Ito,1
-81106344,H.Ito,yumizu,0,Hops,Alakazam,H.Ito,1
-81108279,foo_foo,persn,-1,,,persn,
-81109458,fttp,H.Ito,1,Hops,Hops,H.Ito,1
-81110123,Eigetuin,H.Ito,1,Hops,MegaLucario,H.Ito,1
-81112807,カドラバ Kadoraba,The Debauchery Tea Party,-1,,,カドラバ Kadoraba,
-81120014,H.Ito,SOUTA Sakurai,0,Hops,Crustle,SOUTA Sakurai,-1
-81130129,H.Ito,THIRD PTCG Club,0,Hops,Alakazam,H.Ito,1
-81133296,H.Ito,trail,0,Hops,"other:[878, 879, 1115]",H.Ito,1
-81141614,yamy893,foo_foo,-1,,,yamy893,
-81142775,The Debauchery Tea Party,graybackcat,-1,,,The Debauchery Tea Party,
-81144029,foo_foo,shibushun,-1,,,shibushun,
-81145851,NecromanAlbert,NecromanAlbert,-1,,,NecromanAlbert,
-81146519,NecromanAlbert,RairoRapha,-1,,,NecromanAlbert,
-81147098,VAAAANG,NecromanAlbert,-1,,,NecromanAlbert,
-81147851,NecromanAlbert,Darren Koh,-1,,,NecromanAlbert,
-81148432,pupipupi5,NecromanAlbert,-1,,,NecromanAlbert,
-81152426,monnosuke,H.Ito,1,Hops,"other:[116, 1142, 1152]",monnosuke,-1
-81160286,shibushun,foo_foo,-1,,,shibushun,
-81169945,LagrangianLocomotive,H.Ito,1,Hops,Dragapult,LagrangianLocomotive,-1
-81170523,yomogi mochi,NecromanAlbert,-1,,,NecromanAlbert,
-81171828,TrustHub hiroingk,NecromanAlbert,-1,,,TrustHub hiroingk,
-81171890,H.Ito,kipeo22,0,Hops,Alakazam,H.Ito,1
-81172397,NecromanAlbert,keidroid,-1,,,keidroid,
-81172959,カドラバ Kadoraba,NecromanAlbert,-1,,,NecromanAlbert,
-81173527,Akira-Ninth,NecromanAlbert,-1,,,Akira-Ninth,
-81173669,The Debauchery Tea Party,NecromanAlbert,-1,,,NecromanAlbert,
-81174272,tomatomato,NecromanAlbert,-1,,,tomatomato,
-81174847,NecromanAlbert,yamy893,-1,,,NecromanAlbert,
-81175584,LagrangianLocomotive,NecromanAlbert,-1,,,LagrangianLocomotive,
-81176318,NecromanAlbert,Naoki Maeda,-1,,,NecromanAlbert,
-81177051,LagrangianLocomotive,NecromanAlbert,-1,,,NecromanAlbert,
-81177060,kami,NecromanAlbert,-1,,,NecromanAlbert,
-81177814,NecromanAlbert,カドラバ Kadoraba,-1,,,カドラバ Kadoraba,
-81178562,NecromanAlbert,noikaret,-1,,,NecromanAlbert,
-81179117,LagrangianLocomotive,NecromanAlbert,-1,,,NecromanAlbert,
-81179131,NecromanAlbert,blue0620,-1,,,blue0620,
-81179871,blue0620,NecromanAlbert,-1,,,blue0620,
-81180500,NecromanAlbert,Naoki Maeda,-1,,,NecromanAlbert,
-81180557,水間,H.Ito,1,Hops,Alakazam,H.Ito,1
-81180582,H.Ito,【ＡＩと共に、ＡＩと戦う】tubotu,0,Hops,Alakazam,H.Ito,1
-81181187,foo_foo,NecromanAlbert,-1,,,NecromanAlbert,
-81181752,blue0620,NecromanAlbert,-1,,,blue0620,
-81182383,NecromanAlbert,yamy893,-1,,,NecromanAlbert,
-81183588,TrustHub hiroingk,NecromanAlbert,-1,,,TrustHub hiroingk,
-81184163,charmq,NecromanAlbert,-1,,,NecromanAlbert,
-81187809,NecromanAlbert,The Debauchery Tea Party,-1,,,NecromanAlbert,
-81189736,NecromanAlbert,みずあめ,-1,,,NecromanAlbert,
-81192263,H.Ito,kami,0,Hops,"other:[878, 879]",H.Ito,1
-81201948,H.Ito,Ketchum Alt,0,Hops,"other:[878, 879, 1115]",H.Ito,1
-81202690,foo_foo,H.Ito,1,Hops,Hops,H.Ito,1
-81204783,gongdo,H.Ito,1,Hops-Clefairy,"other:[756, 1071, 1198]",gongdo,-1
-81206290,H.Ito,arutoria,0,Hops-Clefairy,"other:[1227, 265, 268]",arutoria,-1
-81206976,H.Ito,foo_foo,0,Hops,Hops,foo_foo,-1
-81211933,Michael Krager,H.Ito,1,Hops,"other:[506, 1120, 1122]",Michael Krager,-1
-81216271,shimacos,H.Ito,1,Hops,Hops,H.Ito,1
-81217912,H.Ito,Angus Chang,0,Hops,Alakazam,H.Ito,1
-81222354,KK_1999,H.Ito,1,Hops-Clefairy,MegaLucario,KK_1999,-1
-81223026,H.Ito,tk1024,0,Hops-Clefairy,Alakazam,H.Ito,1
-81223879,H.Ito,keisuketsukagoshi,0,Hops-Clefairy,Alakazam,H.Ito,1
-81224483,H.Ito,Kensei,0,Hops-Clefairy,Crustle,H.Ito,1
-81225250,H.Ito,Limo,0,Hops-Clefairy,Crustle,H.Ito,1
-81225257,keidroid,yamy893,-1,,,keidroid,
-81225260,NecromanAlbert,keidroid,-1,,,keidroid,
-81226022,Boseiju,H.Ito,1,Hops-Clefairy,Dragapult,H.Ito,1
-81226023,THIRD PTCG Club,keidroid,-1,,,THIRD PTCG Club,
-81226030,shibushun,keidroid,-1,,,shibushun,
-81226606,TAKESHI7676,H.Ito,1,Hops-Clefairy,Hops,H.Ito,1
-81226615,yamy893,keidroid,-1,,,yamy893,
-81227188,H.Ito,YukihiroMaeda,0,Hops-Clefairy,"other:[42, 93, 89]",H.Ito,1
-81227198,keidroid,THIRD PTCG Club,-1,,,THIRD PTCG Club,
-81227957,H.Ito,The Debauchery Tea Party,0,Hops-Clefairy,Walrein,The Debauchery Tea Party,-1
-81227969,keidroid,THIRD PTCG Club,-1,,,keidroid,
-81227971,keidroid,katsudon 421,-1,,,keidroid,
-81228566,ochisamu,H.Ito,1,Hops-Clefairy,Alakazam,H.Ito,1
-81235527,YukihiroMaeda,H.Ito,1,Hops-Clefairy,"other:[42, 93, 89]",YukihiroMaeda,-1
-81237848,GENGARDEV,H.Ito,1,Hops-Clefairy,MegaLucario,GENGARDEV,-1
-81244181,toruneko,H.Ito,1,Hops-Clefairy,Crustle,H.Ito,1
-81244375,THIRD PTCG Club,keidroid,-1,,,keidroid,
-81244379,yamy893,keidroid,-1,,,keidroid,
-81247340,KuroNeko_Game_Club,H.Ito,1,Hops-Clefairy,Crustle,H.Ito,1
-81247966,H.Ito,Josh Greiff,0,Hops-Clefairy,MegaLucario,Josh Greiff,-1
-81251906,cogitAI,H.Ito,1,Hops-Clefairy,"other:[1134, 1171, 1219]",H.Ito,1
-81260813,H.Ito,Hiroyasu123,0,MegaStarmie,Hops,Hiroyasu123,-1
-81260858,H.Ito,yottan0304,0,MegaStarmie,Dragapult,H.Ito,1
-81261613,H.Ito,Ryosuke Nagamatsu,0,MegaStarmie,"other:[463, 1216, 1217]",Ryosuke Nagamatsu,-1
-81266732,Naoto Sakai,Shun,-1,,,Naoto Sakai,
-81267505,kami,Naoto Sakai,-1,,,Naoto Sakai,
-81268090,TG_Aetheryx,Naoto Sakai,-1,,,TG_Aetheryx,
-81268108,TG_Aetheryx,Naoto Sakai,-1,,,Naoto Sakai,
-81274279,鈴木裕登,H.Ito,1,Hops-Clefairy,MegaLucario,鈴木裕登,-1
-81278163,Adrian Dubois,H.Ito,1,Hops-Clefairy,MegaLucario,Adrian Dubois,-1
-81278919,TwinTV,H.Ito,1,Hops,MegaLucario,H.Ito,1
-81278984,H.Ito,cogitAI,0,Hops-Clefairy,"other:[1134, 1171, 1219]",cogitAI,-1
-81279578,H.Ito,AGNT.gg,0,Hops-Clefairy,MegaLucario,AGNT.gg,-1
-81279752,katsudon 421,Jaga,-1,,,katsudon 421,
-81279762,Aevion-Labs,H.Ito,1,Hops,MegaLucario,Aevion-Labs,-1
-81280485,H.Ito,泣きむしサメチャン,0,Hops-Clefairy,Alakazam,H.Ito,1
-81280486,Jaga,The Debauchery Tea Party,-1,,,Jaga,
-81280497,Jaga,Naoki Maeda,-1,,,Jaga,
-81280506,YOSHI SHIRA,H.Ito,1,Hops,MegaLucario,H.Ito,1
-81281260,H.Ito,owaowata,0,Hops-Clefairy,Alakazam,H.Ito,1
-81281273,Shunji Minode,Jaga,-1,,,Jaga,
-81281287,BuffaloMike,H.Ito,1,Hops,Crustle,BuffaloMike,-1
-81281907,amamori-041226,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
-81282052,graybackcat,Jaga,-1,,,Jaga,
-81282601,NecromanAlbert,Jaga,-1,,,NecromanAlbert,
-81282615,Jaga,TG_Aetheryx,-1,,,Jaga,
-81282623,H.Ito,sou akkk,0,Hops-Clefairy,"other:[1227, 1233, 265]",H.Ito,1
-81283381,H.Ito,Myckel Uribe,0,Hops-Clefairy,"other:[878, 879]",H.Ito,1
-81283961,松原柚月,H.Ito,1,Hops-Clefairy,Dragapult,H.Ito,1
-81283965,The Debauchery Tea Party,Jaga,-1,,,Jaga,
-81285180,H.Ito,すーぱーひとで,0,Hops-Clefairy,Hops,H.Ito,1
-81287102,ankounabe114,H.Ito,1,Hops,Crustle,H.Ito,1
-81287105,Jaga,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81287122,takuyay,Jaga,-1,,,takuyay,
-81288476,Oddball45000,H.Ito,1,Hops-Clefairy,MegaLucario,Oddball45000,-1
-81293764,d_tree_love,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81294340,The Debauchery Tea Party,SmithyAlan,-1,,,The Debauchery Tea Party,
-81294498,H.Ito,Yoshimura Soichiro,0,Hops,MegaLucario,Yoshimura Soichiro,-1
-81294579,H.Ito,Samyakraj Bayar,0,Hops-Clefairy,MegaLucario,H.Ito,1
-81294616,Jaga,graybackcat,-1,,,Jaga,
-81294622,ryoya,H.Ito,1,Hops-Clefairy,MegaStarmie,ryoya,-1
-81295114,Shota Hirao,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81295300,Paul Lockett,H.Ito,1,Hops,Crustle,H.Ito,1
-81295880,The Debauchery Tea Party,Ten Uchikawa,-1,,,The Debauchery Tea Party,
-81296644,NuuNohjo,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81297442,Jaga,The Debauchery Tea Party,-1,,,Jaga,
-81297987,kipeo22,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81298583,nyanlinnmya,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81299354,trail,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81300731,TG_Aetheryx,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81301501,n=1,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81302270,The Debauchery Tea Party,yomogi mochi,-1,,,The Debauchery Tea Party,
-81302855,The Debauchery Tea Party,yamy893,-1,,,yamy893,
-81303447,The Debauchery Tea Party,Karolina Kafel,-1,,,The Debauchery Tea Party,
-81304214,Kohenyan,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81304983,tomatomato,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81305167,yamy893,Jaga,-1,,,Jaga,
-81305183,H.Ito,Dian Deng,0,Hops-Clefairy,Crustle,H.Ito,1
-81305591,The Debauchery Tea Party,yomogi mochi,-1,,,The Debauchery Tea Party,
-81306167,The Debauchery Tea Party,yamy893,-1,,,The Debauchery Tea Party,
-81306313,H.Ito,kota_hkd,0,Hops,Hops,kota_hkd,-1
-81306944,Jaga,The Debauchery Tea Party,-1,,,Jaga,
-81307546,shibushun,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81307643,H.Ito,EliKal,0,Hops,Crustle,H.Ito,1
-81308316,The Debauchery Tea Party,THIRD PTCG Club,-1,,,The Debauchery Tea Party,
-81309088,The Debauchery Tea Party,shibushun,-1,,,shibushun,
-81309865,The Debauchery Tea Party,Jaga,-1,,,Jaga,
-81310459,The Debauchery Tea Party,Jaga,-1,,,Jaga,
-81311220,The Debauchery Tea Party,Jaga,-1,,,Jaga,
-81311790,The Debauchery Tea Party,カドラバ Kadoraba,-1,,,The Debauchery Tea Party,
-81312538,H.Ito,TAKESHI7676,0,Hops-Clefairy,Hops,H.Ito,1
-81312575,yamy893,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81313348,The Debauchery Tea Party,カドラバ Kadoraba,-1,,,The Debauchery Tea Party,
-81314146,カドラバ Kadoraba,Jaga,-1,,,Jaga,
-81314238,Jaga,NecromanAlbert,-1,,,Jaga,
-81314254,H.Ito,SuperNorman,0,Hops-Clefairy,"other:[1227, 1233, 265]",H.Ito,1
-81314720,The Debauchery Tea Party,keidroid,-1,,,keidroid,
-81315421,Jaga,kashiwashira,-1,,,kashiwashira,
-81315483,NecromanAlbert,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81316250,keidroid,The Debauchery Tea Party,-1,,,keidroid,
-81316863,H.Ito,almer,0,Hops-Clefairy,"other:[722, 723, 1145]",H.Ito,1
-81317016,shibushun,The Debauchery Tea Party,-1,,,shibushun,
-81318544,yomogi mochi,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81318561,カドラバ Kadoraba,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81319141,The Debauchery Tea Party,shibushun,-1,,,The Debauchery Tea Party,
-81319856,H.Ito,Riku Suzuki,0,Hops,MegaLucario,H.Ito,1
-81319904,The Debauchery Tea Party,yamy893,-1,,,The Debauchery Tea Party,
-81320660,The Debauchery Tea Party,Jaga,-1,,,Jaga,
-81321387,kashiwashira,The Debauchery Tea Party,-1,,,kashiwashira,
-81321440,カドラバ Kadoraba,The Debauchery Tea Party,-1,,,カドラバ Kadoraba,
-81322218,Jaga,The Debauchery Tea Party,-1,,,Jaga,
-81322226,カドラバ Kadoraba,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81322818,THIRD PTCG Club,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81323398,Jaga,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81323943,foo_foo,H.Ito,1,Hops-Clefairy,Hops,H.Ito,1
-81324009,The Debauchery Tea Party,keidroid,-1,,,keidroid,
-81324580,yamy893,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81325183,Nozopo,H.Ito,1,Hops,Dragapult,Nozopo,-1
-81325365,NecromanAlbert,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81326725,shibushun,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81327484,The Debauchery Tea Party,keidroid,-1,,,keidroid,
-81328072,tomatomato,The Debauchery Tea Party,-1,,,tomatomato,
-81328653,keidroid,The Debauchery Tea Party,-1,,,keidroid,
-81330139,The Debauchery Tea Party,THIRD PTCG Club,-1,,,The Debauchery Tea Party,
-81330960,The Debauchery Tea Party,Jaga,-1,,,Jaga,
-81331540,The Debauchery Tea Party,noikaret,-1,,,The Debauchery Tea Party,
-81333697,Jaga,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81336011,東京みらいテック行政書士事務所,H.Ito,1,Hops,Alakazam,H.Ito,1
-81336043,GoodMorning,Jaga,-1,,,GoodMorning,
-81336238,TLM13 LABS,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
-81336815,The Debauchery Tea Party,Jaga,-1,,,The Debauchery Tea Party,
-81339818,The Debauchery Tea Party,GoodMorning,-1,,,The Debauchery Tea Party,
-81339861,DoAI,H.Ito,1,Hops-Clefairy,Alakazam,DoAI,-1
-81342938,H.Ito,tsbt,0,Hops,Hops,H.Ito,1
-81343740,H.Ito,ShiumAI,0,Hops,Crustle,H.Ito,1
-81344300,Kinf11,H.Ito,1,Hops-Clefairy,Hops,H.Ito,1
-81345056,Terminal 7,H.Ito,1,Hops,MegaStarmie,Terminal 7,-1
-81345284,keidroid,The Debauchery Tea Party,-1,,,keidroid,
-81351113,H.Ito,syuuuuu,0,Hops,Hops,H.Ito,1
-81351173,Jaga,Kohenyan,-1,,,Kohenyan,
-81354167,H.Ito,zhang et al.,0,Hops-Clefairy,MegaLucario,zhang et al.,-1
-81364540,Jaga,keidroid,-1,,,Jaga,
-81367075,H.Ito,dddmd,0,Hops,Alakazam,dddmd,-1
-81367296,kashiwashira,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
-81369956,yumizu,H.Ito,1,Hops,Alakazam,H.Ito,1
-81375842,H.Ito,pao,0,Hops,MegaLucario,H.Ito,1
-81379575,H.Ito,kmy327,0,Hops,MegaLucario,H.Ito,1
-81381877,mmasato,H.Ito,1,Hops,MegaLucario,H.Ito,1
-81382720,H.Ito,Bruno Escalhao,0,Hops-Clefairy,MegaLucario,H.Ito,1
-81400969,Stagapult,H.Ito,1,Hops,MegaLucario,H.Ito,1
-81413721,TG_Aetheryx,Jaga,-1,,,TG_Aetheryx,
-81414494,カドラバ Kadoraba,The Debauchery Tea Party,-1,,,The Debauchery Tea Party,
+episode,my_deck,opp_archetype,result_me,winner
+80799945,,,,opp
+80868526,,,,opp
+80869074,,,,opp
+80869603,,,,opp
+80870139,,,,opp
+80870848,,,,opp
+80871552,,,,opp
+80872250,,,,opp
+80873979,,,,opp
+80880112,,,,opp
+80880657,,,,opp
+80880765,,,,opp
+80881200,,,,opp
+80881899,,,,opp
+80882470,,,,opp
+80882493,,,,opp
+80884252,,,,opp
+80884971,,,,opp
+80885694,,,,opp
+80886411,,,,opp
+80887119,,,,opp
+80887673,,,,opp
+80888204,,,,opp
+80888911,,,,opp
+80889444,,,,opp
+80889993,,,,opp
+80890510,,,,opp
+80891279,,,,opp
+80891993,,,,opp
+80892542,,,,opp
+80893110,,,,opp
+80893837,,,,opp
+80894375,,,,opp
+80921089,Hops,Hops,1,me
+80921799,Hops,MegaLucario,-1,opp
+80923237,Hops,MegaStarmie,1,me
+80923788,Hops,MegaLucario,1,me
+80924497,Hops,MegaLucario,1,me
+80925113,Hops,Alakazam,1,me
+80925212,Hops,Alakazam,1,me
+80925756,Hops,"other:[1227, 1233, 265]",1,me
+80926284,Hops,MegaLucario,-1,opp
+80927001,Hops,Alakazam,1,me
+80927707,Hops,Alakazam,1,me
+80928316,Hops,Hops,1,me
+80932931,Hops,"other:[1227, 1233, 265]",1,me
+80934730,Hops,MegaLucario,-1,opp
+80937248,Hops,MegaLucario,1,me
+80938141,Hops,Alakazam,1,me
+80938146,Hops,Alakazam,1,me
+80941551,Hops,Hops,1,me
+80942651,Hops,Alakazam,1,me
+80946266,Hops,MegaLucario,1,me
+80948325,Hops,MegaLucario,1,me
+80950052,Hops,Alakazam,1,me
+80952019,Hops,Hops,-1,opp
+80955040,Hops,Hops,-1,opp
+80958485,Hops,"other:[1227, 1233, 265]",1,me
+80960133,Hops,Alakazam,-1,opp
+80962363,Hops,Alakazam,-1,opp
+80982156,,,,opp
+80984524,,,,opp
+80985039,Hops,Hops,-1,me
+80985240,,,,opp
+80985932,Hops,Crustle,1,me
+80986112,,,,opp
+80986116,,,,opp
+80986658,Hops,Crustle,1,me
+80986873,,,,opp
+80986874,,,,opp
+80987604,,,,opp
+80988338,,,,opp
+80989071,,,,opp
+80989633,,,,opp
+80990376,,,,opp
+80993830,Hops,Alakazam,1,me
+80994575,Hops,Alakazam,1,me
+80999391,Hops,MegaLucario,1,me
+81000117,Hops,TR-Spidops,-1,opp
+81000868,Hops,"other:[1227, 1233, 265]",-1,opp
+81012267,,,,opp
+81013548,,,,opp
+81014817,,,,opp
+81016102,,,,opp
+81023738,,,,opp
+81035625,,,,opp
+81035633,,,,opp
+81047221,,,,opp
+81055362,,,,opp
+81058442,,,,opp
+81060704,,,,opp
+81063469,,,,opp
+81064026,,,,opp
+81074382,,,,opp
+81079059,Hops,Hops,1,me
+81083675,Hops,Hops,1,me
+81084960,,,,opp
+81091518,,,,opp
+81095548,Hops,Alakazam,-1,opp
+81098331,Hops,Alakazam,-1,opp
+81104999,Hops,Hops,1,me
+81106344,Hops,Alakazam,1,me
+81108279,,,,opp
+81109458,Hops,Hops,1,me
+81110123,Hops,MegaLucario,1,me
+81112807,,,,opp
+81120014,Hops,Crustle,-1,opp
+81130129,Hops,Alakazam,1,me
+81133296,Hops,"other:[878, 879, 1115]",1,me
+81141614,,,,opp
+81142775,,,,opp
+81144029,,,,opp
+81145851,,,,opp
+81146519,,,,opp
+81147098,,,,opp
+81147851,,,,opp
+81148432,,,,opp
+81152426,Hops,"other:[116, 1142, 1152]",-1,opp
+81160286,,,,opp
+81169945,Hops,Dragapult,-1,opp
+81170523,,,,opp
+81171828,,,,opp
+81171890,Hops,Alakazam,1,me
+81172397,,,,opp
+81172959,,,,opp
+81173527,,,,opp
+81173669,,,,opp
+81174272,,,,opp
+81174847,,,,opp
+81175584,,,,opp
+81176318,,,,opp
+81177051,,,,opp
+81177060,,,,opp
+81177814,,,,opp
+81178562,,,,opp
+81179117,,,,opp
+81179131,,,,opp
+81179871,,,,opp
+81180500,,,,opp
+81180557,Hops,Alakazam,1,me
+81180582,Hops,Alakazam,1,me
+81181187,,,,opp
+81181752,,,,opp
+81182383,,,,opp
+81183588,,,,opp
+81184163,,,,opp
+81187809,,,,opp
+81189736,,,,opp
+81192263,Hops,"other:[878, 879]",1,me
+81201948,Hops,"other:[878, 879, 1115]",1,me
+81202690,Hops,Hops,1,me
+81204783,Hops-Clefairy,"other:[756, 1071, 1198]",-1,opp
+81206290,Hops-Clefairy,"other:[1227, 265, 268]",-1,opp
+81206976,Hops,Hops,-1,opp
+81211933,Hops,"other:[506, 1120, 1122]",-1,opp
+81216271,Hops,Hops,1,me
+81217912,Hops,Alakazam,1,me
+81222354,Hops-Clefairy,MegaLucario,-1,opp
+81223026,Hops-Clefairy,Alakazam,1,me
+81223879,Hops-Clefairy,Alakazam,1,me
+81224483,Hops-Clefairy,Crustle,1,me
+81225250,Hops-Clefairy,Crustle,1,me
+81225257,,,,opp
+81225260,,,,opp
+81226022,Hops-Clefairy,Dragapult,1,me
+81226023,,,,opp
+81226030,,,,opp
+81226606,Hops-Clefairy,Hops,1,me
+81226615,,,,opp
+81227188,Hops-Clefairy,"other:[42, 93, 89]",1,me
+81227198,,,,opp
+81227957,Hops-Clefairy,Walrein,-1,opp
+81227969,,,,opp
+81227971,,,,opp
+81228566,Hops-Clefairy,Alakazam,1,me
+81235527,Hops-Clefairy,"other:[42, 93, 89]",-1,opp
+81237848,Hops-Clefairy,MegaLucario,-1,opp
+81244181,Hops-Clefairy,Crustle,1,me
+81244375,,,,opp
+81244379,,,,opp
+81247340,Hops-Clefairy,Crustle,1,me
+81247966,Hops-Clefairy,MegaLucario,-1,opp
+81251906,Hops-Clefairy,"other:[1134, 1171, 1219]",1,me
+81260813,MegaStarmie,Hops,-1,opp
+81260858,MegaStarmie,Dragapult,1,me
+81261613,MegaStarmie,"other:[463, 1216, 1217]",-1,opp
+81266732,,,,opp
+81267505,,,,opp
+81268090,,,,opp
+81268108,,,,opp
+81274279,Hops-Clefairy,MegaLucario,-1,opp
+81278163,Hops-Clefairy,MegaLucario,-1,opp
+81278919,Hops,MegaLucario,1,me
+81278984,Hops-Clefairy,"other:[1134, 1171, 1219]",-1,opp
+81279578,Hops-Clefairy,MegaLucario,-1,opp
+81279752,,,,opp
+81279762,Hops,MegaLucario,-1,opp
+81280485,Hops-Clefairy,Alakazam,1,me
+81280486,,,,opp
+81280497,,,,opp
+81280506,Hops,MegaLucario,1,me
+81281260,Hops-Clefairy,Alakazam,1,me
+81281273,,,,opp
+81281287,Hops,Crustle,-1,opp
+81281907,Hops-Clefairy,MegaLucario,1,me
+81282052,,,,opp
+81282601,,,,opp
+81282615,,,,opp
+81282623,Hops-Clefairy,"other:[1227, 1233, 265]",1,me
+81283381,Hops-Clefairy,"other:[878, 879]",1,me
+81283961,Hops-Clefairy,Dragapult,1,me
+81283965,,,,opp
+81285180,Hops-Clefairy,Hops,1,me
+81287102,Hops,Crustle,1,me
+81287105,,,,opp
+81287122,,,,opp
+81288476,Hops-Clefairy,MegaLucario,-1,opp
+81293764,,,,opp
+81294340,,,,opp
+81294498,Hops,MegaLucario,-1,opp
+81294579,Hops-Clefairy,MegaLucario,1,me
+81294616,,,,opp
+81294622,Hops-Clefairy,MegaStarmie,-1,opp
+81295114,,,,opp
+81295300,Hops,Crustle,1,me
+81295880,,,,opp
+81296644,,,,opp
+81297442,,,,opp
+81297987,,,,opp
+81298583,,,,opp
+81299354,,,,opp
+81300731,,,,opp
+81301501,,,,opp
+81302270,,,,opp
+81302855,,,,opp
+81303447,,,,opp
+81304214,,,,opp
+81304983,,,,opp
+81305167,,,,opp
+81305183,Hops-Clefairy,Crustle,1,me
+81305591,,,,opp
+81306167,,,,opp
+81306313,Hops,Hops,-1,opp
+81306944,,,,opp
+81307546,,,,opp
+81307643,Hops,Crustle,1,me
+81308316,,,,opp
+81309088,,,,opp
+81309865,,,,opp
+81310459,,,,opp
+81311220,,,,opp
+81311790,,,,opp
+81312538,Hops-Clefairy,Hops,1,me
+81312575,,,,opp
+81313348,,,,opp
+81314146,,,,opp
+81314238,,,,opp
+81314254,Hops-Clefairy,"other:[1227, 1233, 265]",1,me
+81314720,,,,opp
+81315421,,,,opp
+81315483,,,,opp
+81316250,,,,opp
+81316863,Hops-Clefairy,"other:[722, 723, 1145]",1,me
+81317016,,,,opp
+81318544,,,,opp
+81318561,,,,opp
+81319141,,,,opp
+81319856,Hops,MegaLucario,1,me
+81319904,,,,opp
+81320660,,,,opp
+81321387,,,,opp
+81321440,,,,opp
+81322218,,,,opp
+81322226,,,,opp
+81322818,,,,opp
+81323398,,,,opp
+81323943,Hops-Clefairy,Hops,1,me
+81324009,,,,opp
+81324580,,,,opp
+81325183,Hops,Dragapult,-1,opp
+81325365,,,,opp
+81326725,,,,opp
+81327484,,,,opp
+81328072,,,,opp
+81328653,,,,opp
+81330139,,,,opp
+81330960,,,,opp
+81331540,,,,opp
+81333697,,,,opp
+81336011,Hops,Alakazam,1,me
+81336043,,,,opp
+81336238,Hops-Clefairy,MegaLucario,1,me
+81336815,,,,opp
+81339818,,,,opp
+81339861,Hops-Clefairy,Alakazam,-1,opp
+81342938,Hops,Hops,1,me
+81343740,Hops,Crustle,1,me
+81344300,Hops-Clefairy,Hops,1,me
+81345056,Hops,MegaStarmie,-1,opp
+81345284,,,,opp
+81351113,Hops,Hops,1,me
+81351173,,,,opp
+81354167,Hops-Clefairy,MegaLucario,-1,opp
+81364540,,,,opp
+81367075,Hops,Alakazam,-1,opp
+81367296,,,,opp
+81369956,Hops,Alakazam,1,me
+81375842,Hops,MegaLucario,1,me
+81379575,Hops,MegaLucario,1,me
+81381877,Hops,MegaLucario,1,me
+81382720,Hops-Clefairy,MegaLucario,1,me
+81400969,Hops,MegaLucario,1,me
+81413721,,,,opp
+81414494,,,,opp
+81222388,keidroid,yomogi mochi,-1,,,keidroid,
+81222398,tomatomato,keidroid,-1,,,tomatomato,
+81223152,keidroid,shibushun,-1,,,shibushun,
+81223906,keidroid,yomogi mochi,-1,,,yomogi mochi,
+81223923,keidroid,yamy893,-1,,,yamy893,
+81224501,yamy893,keidroid,-1,,,keidroid,
+81224512,yamy893,keidroid,-1,,,keidroid,
+81225287,keidroid,The Debauchery Tea Party,-1,,,keidroid,
+81263252,TG_Aetheryx,keidroid,-1,,,keidroid,
+81263375,keidroid,NecromanAlbert,-1,,,keidroid,
+81273003,keidroid,Naoto Sakai,-1,,,keidroid,
+81287852,shibushun,keidroid,-1,,,keidroid,
+81302465,keidroid,shibushun,-1,,,keidroid,
+81313359,keidroid,カドラバ Kadoraba,-1,,,keidroid,
+81324516,keidroid,kashiwashira,-1,,,keidroid,
+81336818,keidroid,tomatomato,-1,,,keidroid,
+81412357,keidroid,カドラバ Kadoraba,-1,,,keidroid,
+81444276,H.Ito,Ats Kubo,0,Dragapult,MegaLucario,Ats Kubo,-1
+81444609,nmdcddwzml,H.Ito,1,Dragapult,Dragapult,H.Ito,1
+81444922,H.Ito,BlueSteel,0,Dragapult,"other:[722, 723, 1145]",BlueSteel,-1
+81475913,keidroid,uuji-qvp,-1,,,keidroid,
+81505237,William_Rod,H.Ito,1,Dragapult,MegaStarmie,H.Ito,1
+81526565,H.Ito,Hiyato,0,MegaStarmie,Alakazam,H.Ito,1
+81526798,nisimu197,H.Ito,1,MegaStarmie,Dragapult,H.Ito,1
+81527064,NecromanAlbert,H.Ito,1,MegaStarmie,Dragapult,NecromanAlbert,-1
+81569367,Naziba Tasnim,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
+81569807,Kaleidoooooo,H.Ito,1,Hops-Clefairy,Dragapult,H.Ito,1
+81570264,Kazeneko,H.Ito,1,Hops-Clefairy,MegaLucario,Kazeneko,-1
+81570729,TK0227,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
+81571184,H.Ito,Shun,0,Hops-Clefairy,MegaStarmie,Shun,-1
+81571819,H.Ito,OgawaraMakoto(Noah),0,Hops-Clefairy,"other:[96, 63, 1094]",OgawaraMakoto(Noah),-1
+81572434,hannahepta,H.Ito,1,Hops-Clefairy,Crustle,H.Ito,1
+81572833,H.Ito,Changdao Chen,0,Hops-Clefairy,MegaLucario,H.Ito,1
+81572870,H.Ito,nishikawa,0,Hops-Clefairy,Dragapult,H.Ito,1
+81573483,Legend Brothers,H.Ito,1,Hops-Clefairy,Alakazam,H.Ito,1
+81574082,H.Ito,ゆんぼぼ,0,Hops-Clefairy,MegaLucario,H.Ito,1
+81576233,H.Ito,Unicorn,0,Hops-Clefairy,MegaLucario,H.Ito,1
+81579421,Xiaolei Lian,H.Ito,1,Hops-Clefairy,MegaLucario,Xiaolei Lian,-1
+81585159,Tokiya Osuka,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
+81585613,ЧАРИЗАРД Я ВЫБИРАЮ ТЕБЯ,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
+81592192,H.Ito,Uta U,0,Hops-Clefairy,Hops,H.Ito,1
+81597018,H.Ito,Gotta catch 'em all,0,Hops-Clefairy,Dragapult,Gotta catch 'em all,-1
+81602440,トゲアリトゲナシトゲトゲ,H.Ito,1,Hops-Clefairy,Alakazam,H.Ito,1
+81609050,bambi_create,H.Ito,1,Hops-Clefairy,Alakazam,H.Ito,1
+81614029,taiki,H.Ito,1,Hops-Clefairy,"other:[1227, 1233, 265]",H.Ito,1
+81618799,Charismatic Pizza Party🍕,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
+81623310,H.Ito,長谷川太一,0,Hops-Clefairy,"other:[878, 879, 1115]",H.Ito,1
+81627419,H.Ito,Toshiki Shinju,0,Hops-Clefairy,MegaLucario,Toshiki Shinju,-1
+81627981,ЧАРИЗАРД Я ВЫБИРАЮ ТЕБЯ,H.Ito,1,Hops-Clefairy,MegaLucario,ЧАРИЗАРД Я ВЫБИРАЮ ТЕБЯ,-1
+81640780,The Debauchery Tea Party,H.Ito,1,Hops-Clefairy,"other:[646, 648, 1086]",The Debauchery Tea Party,-1
+81665519,Raihan Ramadistra,H.Ito,1,Hops-Clefairy,MegaStarmie,Raihan Ramadistra,-1
+81672516,TG_Aetheryx,Yushin Ito,-1,,,TG_Aetheryx,
+81678845,H.Ito,MushaKGL,0,Hops-Clefairy,MegaLucario,H.Ito,1
+81681836,Ricky Yuen,H.Ito,1,Hops-Clefairy,Crustle,Ricky Yuen,-1
+81681858,H.Ito,Yuzuki,0,Hops-Clefairy,"other:[1227, 1233, 265]",H.Ito,1
+81683632,H.Ito,ini,0,Hops-Clefairy,MegaLucario,ini,-1
+81687269,H.Ito,Aslan168,0,Hops-Clefairy,Crustle,H.Ito,1
+81688314,H.Ito,harmo-miu,0,Hops-Clefairy,MegaLucario,H.Ito,1
+81689281,srikalyan,H.Ito,1,Hops-Clefairy,MegaStarmie,srikalyan,-1
+81690865,yosuke kurosu,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
+81694033,jp_nerdery,H.Ito,1,Hops-Clefairy,Hops,H.Ito,1
+81694390,DaJimmy,H.Ito,1,Hops-Clefairy,"other:[1227, 1233, 265]",H.Ito,1
+81697630,H.Ito,tf,0,Hops-Clefairy,MegaLucario,H.Ito,1
+81700896,Toru59er,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
+81702123,Shun,H.Ito,1,Hops-Clefairy,MegaStarmie,Shun,-1
+81703229,H.Ito,Yoshimura Soichiro,0,Hops-Clefairy,MegaLucario,H.Ito,1
+81708463,Oliver King,H.Ito,1,Hops-Clefairy,MegaStarmie,H.Ito,1
+81709178,持ち物検査,H.Ito,1,Hops-Clefairy,"other:[157, 158]",H.Ito,1
+81709623,H.Ito,nyanlinnmya,0,Hops-Clefairy,MegaStarmie,H.Ito,1
+81712158,YUTO KOJIMA,H.Ito,1,Hops-Clefairy,Crustle,H.Ito,1
+81718508,H.Ito,Blake Mosley,0,Hops-Clefairy,Dragapult,Blake Mosley,-1
+81720186,さやのーず,H.Ito,1,Hops-Clefairy,Dragapult,さやのーず,-1
+81723409,mcw999,H.Ito,1,Hops-Clefairy,MegaStarmie,mcw999,-1
+81728174,H.Ito,srikalyan,0,Hops-Clefairy,MegaStarmie,srikalyan,-1
+81730368,H.Ito,テライFACC,0,Hops-Clefairy,Slowking,テライFACC,-1
+81750270,H.Ito,qiao jinxia07,0,Hops-Clefairy,MegaLucario,qiao jinxia07,-1
+81754213,H.Ito,kaggle_bbgg,0,Hops-Clefairy,MegaLucario,H.Ito,1
+81759200,Ketchum Alt,H.Ito,1,Hops-Clefairy,Hops,H.Ito,1
+81762500,Reyhan Ksatria,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
+81770004,H.Ito,Edward Lue Chee Lip,0,Hops-Clefairy,Hops,H.Ito,1
+81781401,soju,H.Ito,1,Hops-Clefairy,Crustle,soju,-1
+81792300,H.Ito,Yuma Takeuchi,0,Hops-Clefairy,Alakazam,H.Ito,1
+81793364,Cosmic Birefringence,H.Ito,1,Hops-Clefairy,MegaStarmie,Cosmic Birefringence,-1
+81795177,H.Ito,miyajiyuta,0,Hops-Clefairy,Walrein,H.Ito,1
+81798546,hookbook,H.Ito,1,Hops-Clefairy,Alakazam,H.Ito,1
+81800327,ACoder,H.Ito,1,Hops-Clefairy,MegaLucario,ACoder,-1
+81809842,H.Ito,nekokaeru,0,Hops-Clefairy,Dragapult,nekokaeru,-1
+81810691,H.Ito,Bruno Escalhao,0,Hops-Clefairy,MegaLucario,Bruno Escalhao,-1
+81813490,kmn,H.Ito,1,Hops-Clefairy,MegaLucario,kmn,-1
+81820308,H.Ito,ごんさくよねきち,0,Hops-Clefairy,MegaLucario,ごんさくよねきち,-1
+81820771,Soichiro Kuribayashi,H.Ito,1,Hops-Clefairy,MegaStarmie,Soichiro Kuribayashi,-1
+81821355,Kohenyan,Yushin Ito,-1,,,Kohenyan,
+81821763,MtN,Yushin Ito,-1,,,MtN,
+81821814,Yushin Ito,kashiwashira,-1,,,Yushin Ito,
+81821821,Yushin Ito,shogo1229,-1,,,Yushin Ito,
+81822430,kami,Yushin Ito,-1,,,kami,
+81823037,Shunji Minode,Yushin Ito,-1,,,Yushin Ito,
+81823646,Yushin Ito,Akito Maruo,-1,,,Yushin Ito,
+81824287,katsudon 421,Yushin Ito,-1,,,Yushin Ito,
+81824871,yomogi mochi,Yushin Ito,-1,,,Yushin Ito,
+81825476,Yushin Ito,MtN,-1,,,Yushin Ito,
+81825937,Yushin Ito,Jaga,-1,,,Yushin Ito,
+81826409,Yushin Ito,tomatomato,-1,,,Yushin Ito,
+81827048,Jaga,Yushin Ito,-1,,,Yushin Ito,
+81827388,Yushin Ito,Karolina Kafel,-1,,,Yushin Ito,
+81827934,Yushin Ito,TG_Aetheryx,-1,,,Yushin Ito,
+81828469,H.Ito,FirstSS-Sub,0,Hops-Clefairy,Hops,H.Ito,1
+81828629,Yushin Ito,tomatomato,-1,,,Yushin Ito,
+81829179,Yushin Ito,Jaga,-1,,,Yushin Ito,
+81829645,tomatomato,Yushin Ito,-1,,,Yushin Ito,
+81830261,Yushin Ito,TG_Aetheryx,-1,,,Yushin Ito,
+81830726,Yushin Ito,keidroid,-1,,,Yushin Ito,
+81831350,tomatomato,Yushin Ito,-1,,,Yushin Ito,
+81831951,Yushin Ito,Kimiaki Nakamura,-1,,,Yushin Ito,
+81832427,Yushin Ito,Mogja J,-1,,,Yushin Ito,
+81833038,Karolina Kafel,Yushin Ito,-1,,,Yushin Ito,
+81833515,Yushin Ito,Shun,-1,,,Yushin Ito,
+81833979,Shun,Yushin Ito,-1,,,Yushin Ito,
+81836664,Praxel,H.Ito,1,Hops-Clefairy,MegaLucario,H.Ito,1
+81841614,aoi_sugawara,H.Ito,1,Hops-Clefairy,Dragapult,aoi_sugawara,-1
+81851043,Yushin Ito,keidroid,-1,,,Yushin Ito,
+81851452,H.Ito,KojiKRSE,0,Hops-Clefairy,Hops,H.Ito,1
+81860166,koucha,H.Ito,1,Hops-Clefairy,Alakazam,H.Ito,1
+81863041,H.Ito,peeta pit,0,Hops-Clefairy,MegaLucario,peeta pit,-1
+81260136,H.Ito,H.Ito,0,MegaStarmie,MegaStarmie,H.Ito,-1
+81262386,箕面からこんにちわ,H.Ito,1,MegaStarmie,MegaLucario,箕面からこんにちわ,-1
+81263171,Clawdia Sakamoto,H.Ito,1,MegaStarmie,"other:[722, 723, 1145]",H.Ito,1
+81263773,psyrax012,H.Ito,1,MegaStarmie,"other:[878, 879, 1115]",H.Ito,1
+81264352,Mohammad Hatoum,H.Ito,1,MegaStarmie,"other:[722, 723, 1145]",Mohammad Hatoum,-1
+81444156,H.Ito,H.Ito,0,Dragapult,Dragapult,H.Ito,1
+81546138,H.Ito,gota,0,Dragapult,"other:[722, 723, 1145]",H.Ito,1
+81556897,tf,H.Ito,1,Dragapult,MegaLucario,tf,-1
+81559516,bambi_create,H.Ito,1,Dragapult,Alakazam,H.Ito,1
+81562234,H.Ito,SuicuneGS,0,Dragapult,"other:[379, 381, 1121]",SuicuneGS,-1
+81811758,Yushin Ito,Yushin Ito,-1,,,Yushin Ito,
+81812456,Ryosuke Aihara,Yushin Ito,-1,,,Yushin Ito,
+81812916,Oleksandr_Savsunenko,Yushin Ito,-1,,,Yushin Ito,
+81813384,Yushin Ito,y.shimada,-1,,,Yushin Ito,
+81813837,llkarill,Yushin Ito,-1,,,Yushin Ito,
+81813946,nekokaeru,Yushin Ito,-1,,,Yushin Ito,
+81814450,Yushin Ito,Yuya Fujiwara,-1,,,Yushin Ito,
+81814921,banana,Yushin Ito,-1,,,Yushin Ito,
+81815542,Bakuney,Yushin Ito,-1,,,Yushin Ito,
+81816006,HIMIHIMI,Yushin Ito,-1,,,HIMIHIMI,
+81816496,Yushin Ito,【ＡＩと共に、ＡＩと戦う】tubotu,-1,,,Yushin Ito,
+81816926,Yushin Ito,zoroark190,-1,,,Yushin Ito,
+81817537,Yushin Ito,foo_foo,-1,,,foo_foo,
+81818144,Yushin Ito,Ajishio,-1,,,Yushin Ito,
+81818787,TG_Aetheryx,Yushin Ito,-1,,,Yushin Ito,
+81819358,Yushin Ito,Gotem Penguin,-1,,,Yushin Ito,
+81819815,Yushin Ito,yamy893,-1,,,Yushin Ito,
+81820273,Yushin Ito,TG_Aetheryx,-1,,,Yushin Ito,
+81820745,ysakuragi,Yushin Ito,-1,,,ysakuragi,
+81864775,Jaga,Yushin Ito,-1,,,Yushin Ito,

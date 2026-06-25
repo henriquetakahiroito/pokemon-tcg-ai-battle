@@ -8,6 +8,7 @@ sample_submission/
 episodes/
 episodes_*/
 deck_sample.csv
+vis.json
 
 # --- Backups and intermediate artifacts ---
 agent/weights_v*.npz
