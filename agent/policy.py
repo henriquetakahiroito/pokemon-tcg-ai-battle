@@ -246,6 +246,11 @@ def _score_attack(o: dict, state: dict) -> float:
     op_pr = _opp_prizes(state)
     our_kos = 6 - op_pr  # how many of our Pokémon have been KO'd
 
+    # The Dunsparce draw line must NEVER attack — it only evolves and draws (Run Away Draw).
+    # If it's stuck Active we retreat it (see _score_retreat / _score_attach), never attack.
+    if my_act and my_act.get("id") in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
+        return -500.0
+
     # ---- Slowking combo: copied-attack valuation ----
     # These attacks (Seek Inspiration's copy targets) carry their damage in effect text,
     # so the DB damage field is 0 and the generic scorer would undervalue them badly.
@@ -327,7 +332,7 @@ def _score_attack(o: dict, state: dict) -> float:
     # Fickle Spitting (Cramorant): 120 dmg for 1 energy — but ONLY at opp 3-4 prizes.
     if ai and ai.attackId == _FICKLE_SPITTING:
         if op_pr not in (3, 4):
-            return -50.0  # condition not met, attack does nothing
+            return -300.0  # does literally NOTHING outside the 3-4 prize window — never fire it
         # In the window: exceptional value — 120 dmg for 1 energy, buy setup time
         return 80.0
 
@@ -1033,6 +1038,26 @@ def _score_attach(o: dict, state: dict) -> float:
             return 18.0   # or its pre-evolution (future main attacker)
         return -5.0  # never cape anything else
 
+    # ---- Hop's Choice Band (-1 attack cost, +30 dmg): put it on a Hop's attacker so it can
+    # attack at reduced (often zero) energy cost. Worthless on the Dunsparce draw line.
+    if _card_id_from_option(o, state) == _HOPS_CHOICE_BAND_ID:
+        tgt = _attach_target()
+        tid = (tgt or {}).get("id")
+        if tid in (_HOPS_PHANTUMP_ID, _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID):
+            return 28.0
+        return -5.0
+
+    # ---- Never energize the Dunsparce draw line (it must not attack). The ONLY exception:
+    # a Dunsparce/Dudunsparce stuck Active that needs energy to pay its retreat cost, so we
+    # can retreat it and bring up a real Hop's attacker.
+    _atgt = _attach_target()
+    if (_atgt or {}).get("id") in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
+        bench_attacker = any((b or {}).get("id") in (_HOPS_PHANTUMP_ID, _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID)
+                             for b in (mp.get("bench") or []))
+        if in_play_area == 4 and bench_attacker and total_energy(_atgt) < 2:
+            return 12.0   # just enough to retreat the stuck draw-line Pokémon
+        return -50.0      # otherwise never power up the draw line
+
     # ---- Ignition Energy: only worth attaching to an EVOLUTION Pokémon (3 energy).
     # On a Basic it provides 1 energy and is discarded end of turn = wasted. ----
     energy_cid = _card_id_from_option(o, state)
@@ -1091,6 +1116,19 @@ def _score_retreat(state: dict) -> float:
         if _attack_energy_need(b, db) == 0:
             bench_ready = True
             break
+    # Cramorant stuck active outside its 3-4 prize window does nothing — swap it out for a
+    # real attacker rather than sit there (or fire a 0-damage Fickle Spitting).
+    if act.get("id") == _HOPS_CRAMORANT_ID and _opp_prizes(state) not in (3, 4):
+        other_bencher = any(b and (b or {}).get("id") not in (None, _DUDUNSPARCE_ID)
+                            for b in bench)
+        if other_bencher:
+            return 8.0
+
+    # Dunsparce/Dudunsparce stuck Active can't attack — retreat to a real Hop's attacker.
+    if act.get("id") in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
+        if any(b and (b or {}).get("id") in (_HOPS_PHANTUMP_ID, _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID)
+               for b in bench):
+            return 9.0
     if curr_hp <= 30:
         return 7.0 if bench else 1.0   # very low HP: retreat if possible
     if max_hp > 0 and curr_hp < max_hp * 0.4 and bench_ready:
@@ -1101,9 +1139,11 @@ def _score_retreat(state: dict) -> float:
 def _score_ability(o: dict, state: dict) -> float:
     """Score using an ability. Handles Dudunsparce 'Run Away Draw' explicitly."""
     mp = my_state(state)
-    # Identify which Pokémon's ability this is via inPlayArea/inPlayIndex
-    area = o.get("inPlayArea")
-    idx = o.get("inPlayIndex")
+    # Identify which Pokémon's ability this is. ABILITY options carry the in-play location in
+    # `area`/`index` (4=ACTIVE, 5=BENCH) — NOT inPlayArea/inPlayIndex (those are always None
+    # here, which silently broke every ability-specific score below).
+    area = o.get("area")
+    idx = o.get("index")
     cid = None
     if area == 4:
         act = active_of(mp)
@@ -1113,15 +1153,14 @@ def _score_ability(o: dict, state: dict) -> float:
         if idx is not None and 0 <= idx < len(bench) and bench[idx]:
             cid = bench[idx].get("id")
 
-    # Dudunsparce "Run Away Draw": draw 3, bounce to deck.
-    # Always valuable (refills hand + prevents deck-out); scale with hand thinness.
+    # Dudunsparce "Run Away Draw": draw 3, then shuffle Dudunsparce back into the deck.
+    # It is FREE — using it does NOT end the turn — so when we want cards we must use it
+    # BEFORE attacking, or the attack ends the turn and the draw is wasted. Score it above
+    # attacks while the hand is thin; once the hand is healthy, hold it (it shuffles the
+    # Dudunsparce away, so don't burn the engine for cards we don't need).
     if cid == _DUDUNSPARCE_ID:
         hand_n = mp.get("handCount", 0)
-        if hand_n <= 2:
-            return 18.0  # critical — very low hand, draw immediately
-        if hand_n <= 4:
-            return 14.0  # good refill
-        return 10.0     # useful but not urgent
+        return 110.0 if hand_n <= 4 else 8.0
 
     # Cinderace: use its ability every time it's available (the Turbo Flare / Explosiveness
     # accel engine is the whole deck). Top ability priority.
