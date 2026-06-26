@@ -120,6 +120,10 @@ _HORRIFYING_REVENGE  = 1267  # Trevenant 30+ dmg, scales with Hop's KOs taken
 _CORNER              = 1268  # Trevenant 90 dmg + locks retreat
 
 _MIST_ENERGY_ID = 11  # Protects active from effects of opponent's attacks
+_LEGACY_ENERGY_ID = 12  # provides any type; the Pokémon it's on takes +1 Prize on KO — a
+                        # prize-race finisher: put on an attacker when opp has 3-4 prizes left
+_TELEPATH_PSYCHIC_ENERGY_ID = 19  # on a Psychic Pokémon, search a Psychic Basic to the bench
+                                  # (free board development) + powers Psychic attackers
 
 # Dragapult meta counter cards
 _LILLIE_CLEFAIRY_EX_ID = 272   # bench ability "Fairy Zone": Dragon Pokémon get Psychic weakness
@@ -363,12 +367,21 @@ def _score_attack(o: dict, state: dict) -> float:
     if ai and ai.attackId == _FICKLE_SPITTING:
         if op_pr not in (3, 4):
             return -300.0  # does literally NOTHING outside the 3-4 prize window — never fire it
+        # Vs Lucario: only fire at a target the 120 actually KOs for value (Solrock / Lunatone /
+        # damaged Hariyama). Never waste it on the 340 HP Mega Lucario.
+        if _opp_is_lucario(state) and not _cramorant_target_ok(state):
+            return -300.0
         # In the window: exceptional value — 120 dmg for 1 energy, buy setup time
         return 80.0
 
     # Splashing Dodge (Phantump): 10 dmg + coin-flip full protection.
     # Valuable early (stall + protect setup); weak later when we need real damage.
     if ai and ai.attackId == _SPLASHING_DODGE:
+        # Vs Lucario, Phantump IS the gameplan: stall + protect with Splashing Dodge while we
+        # set up. But once we've taken a KO, step aside (low) so the freshly promoted Phantump
+        # EVOLVES to Trevenant and Horrifying Revenge (130 + modifiers, 2x Psychic) KOs the Mega.
+        if _opp_is_lucario(state):
+            return 40.0 if our_kos == 0 else 6.0
         if op_pr == 6:
             return 35.0  # early game: protection > damage
         return 18.0  # late game: very low damage, deprioritize
@@ -597,6 +610,25 @@ def _opp_bench_ko_available(state: dict) -> bool:
     return False
 
 
+def _boss_positive_prize_ko(state: dict) -> bool:
+    """True if gusting an opponent benched Pokémon gives a POSITIVE prize trade — i.e. a 2-prize
+    ex we can realistically KO (our Hop's attackers reach ~150 with Snorlax/Band/Postwick). Used
+    to gate fetching Boss's Orders via Meowth ex: only do it when the gust actually wins prizes,
+    not for an even 1-for-1."""
+    op = opp_state(state)
+    db = get_db()
+    for b in (op.get("bench") or []):
+        if not b:
+            continue
+        try:
+            is_ex = bool(db.card(b.get("id")).ex)
+        except Exception:
+            is_ex = False
+        if is_ex and b.get("hp", 9999) <= 200:
+            return True
+    return False
+
+
 def _hand_ids(state: dict) -> list:
     mp = my_state(state)
     return [(h or {}).get("id") for h in (mp.get("hand") or []) if h]
@@ -617,6 +649,58 @@ def _hand_has_supporter(state: dict) -> bool:
         if ct is not None and ct.name == "SUPPORTER":
             return True
     return False
+
+
+def _hard_forbidden(o: dict, state: dict) -> bool:
+    """Moves the MCTS root bandit must NEVER pick. These are rule-breaking but materially
+    NEUTRAL (they don't lose the game), so the rollout value won't avoid them and a -500 prior
+    is ignored — they must be FILTERED OUT of the candidate list (see MctsAgent.decide). Covers:
+      - Hop's Choice Band on anything other than an attacking Hop's Pokémon (Phantump/Cramorant/
+        Trevenant). Replay 81913147 showed it on Meowth ex / Dunsparce / Dudunsparce.
+      - Any energy attached to the Dunsparce draw line (it must never carry energy)."""
+    if o.get("type") != OptionType.ATTACH.value:
+        return False
+    db = get_db()
+    cid = _card_id_from_option(o, state)  # the energy/tool being attached (from hand)
+    mp = my_state(state)
+    ipa, ipi = o.get("inPlayArea"), o.get("inPlayIndex")
+    tgt = None
+    if ipa == 4:
+        tgt = active_of(mp)
+    elif ipa == 5:
+        bench = mp.get("bench") or []
+        if ipi is not None and 0 <= ipi < len(bench):
+            tgt = bench[ipi]
+    tid = (tgt or {}).get("id")
+    if cid == _HOPS_CHOICE_BAND_ID and tid not in (_HOPS_PHANTUMP_ID, _HOPS_CRAMORANT_ID, _HOPS_TREVENANT_ID):
+        return True
+    if cid is not None and db.is_energy(cid) and tid in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
+        return True
+    return False
+
+
+def _meowth_bench_score(state: dict, bench_n: int) -> float:
+    """When to put Meowth ex on the bench. Its Last-Ditch Catch tutors a Supporter on bench-play,
+    but it's a 170 HP 2-prize liability — play it only for a reason. Per the rules:
+      - If we already have a Supporter in hand and no special need: DON'T play it (-2).
+      - Bricked (no Supporter): try POKEGEAR 3.0 FIRST (cheap Item dig, no 2-prize liability).
+        Only commit Meowth if we have no Pokegear to try (or it already whiffed → no longer in hand).
+      - Gust: fetch Boss's Orders ONLY when it sets up a POSITIVE prize-trade KO (a 2-prize ex we
+        can knock out) — never for an even 1-for-1, and never over-fetch a Boss we already hold.
+    Never attacks (handled in _score_attack)."""
+    if bench_n >= 5:
+        return -1.0
+    hand = _hand_ids(state)
+    if not _hand_has_supporter(state):
+        # bricked: Pokegear first if we have it, else bench Meowth to guarantee a Supporter
+        if _POKEGEAR_ID in hand:
+            return 3.0    # below Pokegear's score so it plays first; revisit Meowth if it whiffs
+        return 15.0
+    # we have a Supporter already — the only remaining reason is a gust that WINS prizes: a
+    # 2-prize ex we can KO, and only if we aren't already holding a Boss.
+    if _boss_positive_prize_ko(state) and (_BOSS_ORDERS_ID not in hand):
+        return 14.0       # fetch Boss's Orders for a positive-prize-trade KO
+    return -2.0           # don't need it: leave the 2-prize liability in the deck
 
 
 def _active_is_staryu(state: dict) -> bool:
@@ -851,6 +935,31 @@ def _lucario_in_play(state: dict) -> bool:
                for p in [active_of(mp)] + list(mp.get("bench") or []))
 
 
+def _opp_is_lucario(state: dict) -> bool:
+    """True if the OPPONENT is the Mega Lucario deck (Riolu / Mega Lucario in play). Used for the
+    Hops vs Lucario gameplan: Phantump stalls, Trevenant finishes, Cramorant only snipes support."""
+    op = opp_state(state)
+    return any((p or {}).get("id") in (_RIOLU_ID, _MEGA_LUCARIO_ID)
+               for p in [active_of(op)] + list(op.get("bench") or []))
+
+
+def _cramorant_target_ok(state: dict) -> bool:
+    """Vs Lucario, Cramorant's Fickle Spitting (120) should only fire at a target it actually
+    KOs for value — a Solrock or Lunatone (their draw engine), or a Hariyama already damaged
+    enough to fall to 120. NEVER the 340 HP Mega Lucario (the 120 is wasted)."""
+    oa = active_of(opp_state(state))
+    if not oa:
+        return False
+    cid = oa.get("id")
+    if cid in (_SOLROCK_ID, _LUNATONE_ID):
+        return True
+    if cid == _HARIYAMA_ID:
+        hp = oa.get("hp", 9999)
+        max_hp = oa.get("maxHp", hp) or hp
+        return hp < max_hp and hp <= 120  # damaged AND within Cramorant's 120 KO range
+    return False
+
+
 def _lucario_accel_useful(state: dict) -> bool:
     """Aura Jab attaches up to 3 Basic {F} from DISCARD to the bench — useful only when we
     have Fire energy in the discard AND a benched Pokémon that still needs energy."""
@@ -975,20 +1084,9 @@ def _score_play(o: dict, state: dict) -> float:
             if _opp_has_dragon_threat(state):
                 return 8.0   # Dragon line on bench: prepare before it comes active
             return -500.0    # No Dragon anywhere: never put her down
-        # Meowth ex: ONLY play it for a reason — its Last-Ditch Catch tutors a Supporter on
-        # bench-play. Use it (a) when the hand is bricked (no Supporter to advance the turn),
-        # or (b) to fetch Boss's Orders when we need a gust to set up a KO. Never as a generic
-        # early bench drop (it's a 170 HP 2-prize liability sitting there). It never attacks.
+        # Meowth ex: bench it only for a reason (Supporter tutor), Pokegear-first. See helper.
         if cid == _MEOWTH_EX_ID:
-            if bench_n >= 5:
-                return -1.0
-            need_supporter = not _hand_has_supporter(state)
-            need_gust = _opp_bench_ko_available(state) and (_BOSS_ORDERS_ID not in _hand_ids(state))
-            if need_supporter:
-                return 15.0   # bricked: tutor any Supporter to keep the turn going
-            if need_gust:
-                return 14.0   # fetch Boss's Orders to gust a benched KO target
-            return -2.0       # have what we need: don't waste the ex on the bench
+            return _meowth_bench_score(state, bench_n)
         return 12.0 - 2.0 * bench_n if bench_n < 5 else -1.0
     if name == "SUPPORTER":
         # Boss's Orders: play it only when it gusts up a benched target we can KO this turn.
@@ -1026,6 +1124,11 @@ def _score_play(o: dict, state: dict) -> float:
             if hand_n >= 4:
                 return 9.0   # tight but can afford the 3 discards
             return 2.0       # can't use it
+        # Pokegear 3.0: dig top 7 for a Supporter. PRIORITIZE it when bricked (no Supporter in
+        # hand) so it goes BEFORE Meowth ex (the user's rule: Pokegear first, Meowth only if it
+        # whiffs). Lower when we already hold a Supporter.
+        if cid == _POKEGEAR_ID:
+            return 14.0 if not _hand_has_supporter(state) else 6.0
         # Team Rocket's Transceiver: searches any Team Rocket's Supporter (Petrel).
         # More valuable when hand is thin (needs draw engine).
         if cid == _TR_TRANSCEIVER_ID:
@@ -1091,29 +1194,61 @@ def _score_attach(o: dict, state: dict) -> float:
             return 18.0   # or its pre-evolution (future main attacker)
         return -5.0  # never cape anything else
 
-    # ---- Hop's Choice Band (-1 attack cost, +30 dmg): put it on a Hop's attacker so it can
-    # attack at reduced (often zero) energy cost. Worthless on the Dunsparce draw line.
+    # ---- Hop's Choice Band (-1 attack cost, +30 dmg): ONLY on a Hop's Pokémon. PRIORITY is
+    # always on Phantump / Cramorant when one of them is the Active (attacking this turn) — the
+    # -1 cost lets them attack for free and +30 boosts the hit. Trevenant still gets it when it's
+    # the active finisher (e.g. the +30 modifier that KOs Mega Lucario). Never on anything else.
     if _card_id_from_option(o, state) == _HOPS_CHOICE_BAND_ID:
         tgt = _attach_target()
         tid = (tgt or {}).get("id")
-        if tid in (_HOPS_PHANTUMP_ID, _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID):
-            return 28.0
-        return -5.0
+        is_active = (in_play_area == 4)
+        if tid in (_HOPS_PHANTUMP_ID, _HOPS_CRAMORANT_ID):
+            return 32.0 if is_active else 24.0   # priority: attacking THIS turn
+        if tid == _HOPS_TREVENANT_ID:
+            return 28.0 if is_active else 22.0
+        # HARD block on any non-attacking-Hop's target (Meowth ex, Dunsparce line, Snorlax,
+        # Clefairy...). Must be -500 not -5: the MCTS search treats the score as a prior and a
+        # mere -5 still got Choice Band onto Meowth/Dunsparce on the ladder. -500 makes the
+        # search prior ~0 so it is effectively never chosen.
+        return -500.0
 
-    # ---- Never energize the Dunsparce draw line (it must not attack). The ONLY exception:
-    # a Dunsparce/Dudunsparce stuck Active that needs energy to pay its retreat cost, so we
-    # can retreat it and bring up a real Hop's attacker.
+    # ---- NEVER energize the Dunsparce draw line. It must never attack and must never carry
+    # energy — not even to pay a retreat. (The never-promote rules keep it off the Active.)
     _atgt = _attach_target()
     if (_atgt or {}).get("id") in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
-        bench_attacker = any((b or {}).get("id") in (_HOPS_PHANTUMP_ID, _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID)
-                             for b in (mp.get("bench") or []))
-        if in_play_area == 4 and bench_attacker and total_energy(_atgt) < 2:
-            return 12.0   # just enough to retreat the stuck draw-line Pokémon
-        return -50.0      # otherwise never power up the draw line
+        return -50.0
+
+    energy_cid = _card_id_from_option(o, state)
+
+    # ---- Telepath Psychic Energy: on a PSYCHIC Pokémon it searches a Psychic Basic to the
+    # bench (free board development) and powers our Psychic attackers (Phantump/Trevenant).
+    # Strongly prefer a Psychic target so the search triggers; near-worthless elsewhere.
+    if energy_cid == _TELEPATH_PSYCHIC_ENERGY_ID:
+        _t = _attach_target()
+        try:
+            is_psychic = bool(_t and db.card(_t.get("id")).energyType == _PSYCHIC_ENERGY_TYPE)
+        except Exception:
+            is_psychic = False
+        if is_psychic:
+            need = _attack_energy_need(_t, db)
+            return 26.0 + need * 2.0   # development search + charges a Psychic attacker
+        return 4.0                     # no search, just a stranded energy — avoid
+
+    # ---- Legacy Energy: the Pokémon it's on takes +1 Prize when it KOs. It's a PRIZE-RACE
+    # finisher — only worth it on a real attacker (Phantump/Trevenant/Cramorant) once the
+    # opponent is at 3-4 prizes (closing the game). Otherwise hold it.
+    if energy_cid == _LEGACY_ENERGY_ID:
+        _t = _attach_target()
+        tid = (_t or {}).get("id")
+        is_attacker = tid in (_HOPS_PHANTUMP_ID, _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID)
+        if is_attacker and _opp_prizes(state) in (3, 4):
+            return 28.0   # extra prize on KO wins the race — the moment to use it
+        if is_attacker:
+            return 4.0    # right target, wrong time — prefer other energy, save Legacy
+        return 1.0        # never waste the prize-race finisher on a non-attacker
 
     # ---- Ignition Energy: only worth attaching to an EVOLUTION Pokémon (3 energy).
     # On a Basic it provides 1 energy and is discarded end of turn = wasted. ----
-    energy_cid = _card_id_from_option(o, state)
     if energy_cid == _IGNITION_ENERGY_ID:
         target = None
         if in_play_area == 4:
@@ -1311,8 +1446,10 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
             op_pr = len(op.get("prize") or [])
             our_kos = 6 - op_pr
 
-            # Dudunsparce: bench-only draw engine. Never send active unless no other choice.
-            if cid == _DUDUNSPARCE_ID:
+            # Dunsparce / Dudunsparce: bench-only draw line. Never promote to Active unless it's
+            # the only legal choice (and since we never energize it, a stuck one can't retreat —
+            # so it's doubly important to keep it off the Active Spot).
+            if cid in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
                 return 1.0
 
             # Meowth ex: bench-only consistency tutor — 170 HP 2-prize bait if sent active.
@@ -1334,17 +1471,29 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
                 )
                 return 2.0 if has_other_benchers else 10.0  # last resort only
 
-            # Cramorant: only send active when Fickle Spitting window is open (3-4 prizes)
-            if cid == _HOPS_CRAMORANT_ID:
-                return 30.0 if op_pr in (3, 4) else 4.0
+            opp_lucario = _opp_is_lucario(state)
 
-            # Phantump: priority early game for protection stall
+            # Cramorant: only send active when Fickle Spitting window is open (3-4 prizes).
+            # Vs Lucario, additionally require a sniped target it can KO (Solrock / Lunatone /
+            # damaged Hariyama) — never promote it just to whiff on the 340 HP Mega.
+            if cid == _HOPS_CRAMORANT_ID:
+                if op_pr in (3, 4) and (not opp_lucario or _cramorant_target_ok(state)):
+                    return 30.0
+                return 4.0
+
+            # Phantump: the Lucario gameplan's stall attacker — keep it active vs Lucario until
+            # we've taken a KO (then Trevenant takes over). Otherwise early-game protection.
             if cid == _HOPS_PHANTUMP_ID:
+                if opp_lucario:
+                    return 28.0 if our_kos == 0 else 8.0
                 return 22.0 if op_pr == 6 else 10.0
 
-            # Trevenant: priority after we've taken KOs (Horrifying Revenge live);
-            # also good mid-game with Corner (90 + up to 90 from modifiers)
+            # Trevenant: priority after we've taken KOs (Horrifying Revenge live) — vs Lucario
+            # this is THE finisher (130 + Snorlax/Band/Postwick modifier, 2x Psychic = KOs the
+            # 340 HP Mega). Also good mid-game with Corner (90 + up to 90 from modifiers).
             if cid == _HOPS_TREVENANT_ID:
+                if opp_lucario and our_kos > 0:
+                    return 40.0
                 return 26.0 if our_kos > 0 else 18.0
 
             # Mega Starmie: when promoting (after a KO or via switch), prefer a charged Mega
@@ -1378,14 +1527,9 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
             if _opp_has_dragon_threat(state):
                 return 8.0
             return -500.0
-        # Meowth ex: only field it for the Last-Ditch Catch tutor — when bricked (no Supporter
-        # in hand) or to fetch Boss's Orders for a needed gust. Otherwise keep it in hand.
+        # Meowth ex: field it only for the Supporter tutor, Pokegear-first (shared helper).
         if cid == _MEOWTH_EX_ID:
-            if not _hand_has_supporter(state):
-                return 15.0
-            if _opp_bench_ko_available(state) and (_BOSS_ORDERS_ID not in _hand_ids(state)):
-                return 14.0
-            return -2.0
+            return _meowth_bench_score(state, len(my_state(state).get("bench") or []))
         return 10.0
 
     # ---- Damage targeting: KO the lowest-HP opponent Pokémon ----
