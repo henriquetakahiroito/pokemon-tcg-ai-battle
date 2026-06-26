@@ -1293,6 +1293,12 @@ def _score_attach(o: dict, state: dict) -> float:
         if in_play_idx is not None and 0 <= in_play_idx < len(bench) and bench[in_play_idx]:
             b_poke = bench[in_play_idx]
             need = _attack_energy_need(b_poke, db)
+            # Vs Lucario the loss pattern is energy drought: our 70-140 HP attacker dies before
+            # it charges, and we promote a 0E mon that can't attack. Pre-charge a BENCHED finisher
+            # (Trevenant / Phantump) so a ready attacker is always waiting. Still below active
+            # (14) so we charge the attacker-in-play first. Gated — no other matchup affected.
+            if _opp_is_lucario(state) and b_poke.get("id") in (_HOPS_TREVENANT_ID, _HOPS_PHANTUMP_ID):
+                return 12.0 + max(0, 2 - need) * 1.0
             # Score bench charging below active, but higher when almost ready
             return 7.0 + max(0, 2 - need) * 1.0
         return 8.0
