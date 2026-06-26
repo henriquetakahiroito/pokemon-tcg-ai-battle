@@ -592,8 +592,24 @@ def _opp_has_energy(state: dict) -> bool:
     return False
 
 
+def _ko_prize_value(db, cid: int) -> int:
+    """Prizes given up when this Pokémon is KO'd: megaEx = 3, ex = 2, else 1.
+    CRITICAL: a Mega (Mega Lucario, Mega Starmie) has ex == False, megaEx == True — so the old
+    `bool(card.ex)` check treated the 3-prize Mega as a 1-prize nobody and the Boss/gust logic
+    systematically ignored the biggest KO in the Lucario and Starmie matchups."""
+    try:
+        c = db.card(cid)
+        if getattr(c, "megaEx", False):
+            return 3
+        if getattr(c, "ex", False):
+            return 2
+    except Exception:
+        pass
+    return 1
+
+
 def _opp_bench_ko_available(state: dict) -> bool:
-    """True if an opponent benched Pokémon is worth gusting up for a KO: an ex (2 prizes)
+    """True if an opponent benched Pokémon is worth gusting up for a KO: a 2+ prize ex/Mega
     or anything Nebula Beam (210) can one-shot. Used to value Boss's Orders."""
     op = opp_state(state)
     db = get_db()
@@ -601,11 +617,8 @@ def _opp_bench_ko_available(state: dict) -> bool:
         if not b:
             continue
         hp = b.get("hp", 9999)
-        try:
-            is_ex = bool(db.card(b.get("id")).ex)
-        except Exception:
-            is_ex = False
-        if hp <= 210 and (is_ex or hp <= 130):
+        high_value = _ko_prize_value(db, b.get("id")) >= 2
+        if hp <= 210 and (high_value or hp <= 130):
             return True
     return False
 
@@ -620,11 +633,7 @@ def _boss_positive_prize_ko(state: dict) -> bool:
     for b in (op.get("bench") or []):
         if not b:
             continue
-        try:
-            is_ex = bool(db.card(b.get("id")).ex)
-        except Exception:
-            is_ex = False
-        if is_ex and b.get("hp", 9999) <= 200:
+        if _ko_prize_value(db, b.get("id")) >= 2 and b.get("hp", 9999) <= 200:
             return True
     return False
 
@@ -741,11 +750,7 @@ def _boss_two_prize_with_jetting(state: dict) -> bool:
     for b in (op.get("bench") or []):
         if not b:
             continue
-        try:
-            is_ex = bool(db.card(b.get("id")).ex)
-        except Exception:
-            is_ex = False
-        if not is_ex:
+        if _ko_prize_value(db, b.get("id")) < 2:
             continue
         dmg = attack_damage_estimate(atk_id, b.get("id"), 120)
         if dmg >= b.get("hp", 9999):
@@ -755,8 +760,8 @@ def _boss_two_prize_with_jetting(state: dict) -> bool:
 
 def _boss_ko_target_available(state: dict) -> int:
     """Boss's Orders gusts an opponent's benched Pokémon active. Return the prize value
-    (2 for an ex, 1 otherwise) of the most valuable benched target our ACTIVE attacker
-    could KO this turn if it were dragged up; 0 if there is no KO target."""
+    (3 for a Mega/megaEx, 2 for an ex, 1 otherwise) of the most valuable benched target our
+    ACTIVE attacker could KO this turn if it were dragged up; 0 if there is no KO target."""
     db = get_db()
     mp = my_state(state)
     op = opp_state(state)
@@ -784,11 +789,7 @@ def _boss_ko_target_available(state: dict) -> int:
             except Exception:
                 pass
         if dmg >= b.get("hp", 9999):
-            try:
-                is_ex = bool(db.card(b.get("id")).ex)
-            except Exception:
-                is_ex = False
-            best = max(best, 2 if is_ex else 1)
+            best = max(best, _ko_prize_value(db, b.get("id")))
     return best
 
 
