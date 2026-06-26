@@ -39,3 +39,8 @@ WEIGHTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "weights
 
 # Blend between heuristic and value net at leaves: 0 = pure heuristic, 1 = pure net.
 VALUE_NET_WEIGHT = float(os.environ.get("PTCG_VNET_W", "0.7"))
+
+# --- Own-turn forward beam search (BeamAgent) ---
+BEAM_WIDTH = int(os.environ.get("PTCG_BEAM_WIDTH", "3"))
+BEAM_TIME_BUDGET = float(os.environ.get("PTCG_BEAM_BUDGET", "1.2"))
+BEAM_MAX_DEPTH = int(os.environ.get("PTCG_BEAM_DEPTH", "8"))
