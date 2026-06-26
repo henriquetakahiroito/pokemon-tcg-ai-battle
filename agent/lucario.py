@@ -65,6 +65,12 @@ LOW_DECK_COUNT = 10
 _ABRA_BONUS = 400
 _KADABRA_BONUS = 400
 
+# Mirror edge: Mega Lucario ex is 340 HP and Mega Brave only does 270, so chipping their tanky
+# Mega is slow — but their Riolu is 80 HP. KOing the Riolu denies a 3-prize attacker outright.
+# Tunable so we can sweep it locally (env override for experiments).
+import os as _os
+RIOLU_KILL_BONUS = int(_os.environ.get("LUC_RIOLU_KILL", "1500"))
+
 _all_card = all_card_data()
 card_table = {card.cardId: card for card in _all_card}
 
@@ -122,7 +128,7 @@ def target_score(pokemon):
         score += 250
     elif data.stage1:
         score += 130
-    if pokemon.id in {144, 322, 323, 337}:  # low-value support Pokemon
+    if pokemon.id in {173, 174, 190, 1071}:  # low-value support/pivot: Noctowl, Fan Rotom, Archaludon ex, Meowth ex
         score -= 200
     if pokemon.id == C.SNOVER:
         score += 950   # KO Snover before it evolves into Mega Abomasnow (Fighting wall)
@@ -133,7 +139,7 @@ def target_score(pokemon):
     elif pokemon.id == C.KADABRA:
         score += _KADABRA_BONUS
     if pokemon.id == C.RIOLU:
-        score += 800   # deny opponent's Lucario line by KOing Riolu (mirror edge)
+        score += RIOLU_KILL_BONUS   # deny opponent's Lucario line by KOing Riolu (mirror edge)
     elif pokemon.id == C.MEGA_LUCARIO_EX:
         score += 100
     if pokemon.id == 112 and len(pokemon.energies) >= 1:  # Munkidori

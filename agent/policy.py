@@ -1087,6 +1087,12 @@ def _score_play(o: dict, state: dict) -> float:
         # Meowth ex: bench it only for a reason (Supporter tutor), Pokegear-first. See helper.
         if cid == _MEOWTH_EX_ID:
             return _meowth_bench_score(state, bench_n)
+        # Vs Lucario: the 340 HP Mega only falls to Trevenant's 2x when the +30 modifiers are
+        # ALREADY down. Get Snorlax ("Extra Helpings" +30) on the bench EARLY — before the
+        # finisher comes online — so the KO is ready, not one piece short. Gated to Lucario.
+        if (cid == _HOPS_SNORLAX_ID and _opp_is_lucario(state)
+                and not _has_in_play(state, _HOPS_SNORLAX_ID) and bench_n < 5):
+            return 15.0
         return 12.0 - 2.0 * bench_n if bench_n < 5 else -1.0
     if name == "SUPPORTER":
         # Boss's Orders: play it only when it gusts up a benched target we can KO this turn.
@@ -1141,7 +1147,13 @@ def _score_play(o: dict, state: dict) -> float:
         if cid == _POSTWICK_ID:
             stadium = state.get("stadium") or []
             watchtower_up = any((c or {}).get("id") == _WATCHTOWER_ID for c in stadium)
-            return 12.0 if watchtower_up else 6.0
+            if watchtower_up:
+                return 12.0
+            # Vs Lucario, Postwick's +30 is a required piece of the Trevenant 2x KO on the
+            # 340 HP Mega — lay it down proactively (gated, no effect on other matchups).
+            if _opp_is_lucario(state):
+                return 11.0
+            return 6.0
         # Academy at Night: combo enabler — put a payoff Pokémon on top for Seek Inspiration.
         if cid == _ACADEMY_NIGHT_ID:
             return 13.0 if _slowking_active_charged(state) else 6.5
