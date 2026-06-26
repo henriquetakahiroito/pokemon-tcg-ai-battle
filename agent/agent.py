@@ -150,6 +150,9 @@ _AGENT = None
 def _make_agent():
     from .base import read_deck
     kind = os.environ.get("PTCG_AGENT", "mcts").lower()
+    if kind == "lucario":
+        from .lucario import LucarioAgent
+        return LucarioAgent(deck=read_deck(), seed=random.randrange(1 << 30))
     cls = BeamAgent if kind == "beam" else MctsAgent
     return cls(deck=read_deck(), seed=random.randrange(1 << 30))
 
