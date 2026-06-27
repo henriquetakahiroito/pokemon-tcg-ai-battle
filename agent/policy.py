@@ -99,7 +99,11 @@ _HOPS_CRAMORANT_ID    = 311   # Fickle Spitting: 120 dmg, only at opp 3-4 prizes
 _HOPS_PHANTUMP_ID     = 878   # Splashing Dodge: 10 dmg + protection flip (early game)
 _HOPS_TREVENANT_ID    = 879   # Horrifying Revenge / Corner (post-KO revenge attacker)
 _HOPS_SNORLAX_ID      = 304   # bench ability "Extra Helpings": Hop's attacks +30 (no stack)
-_DUNSPARCE_ID         = 65    # Basic; evolves into Dudunsparce
+_DUNSPARCE_ID         = 305   # Basic (70 HP variant); evolves into Dudunsparce. We don't retreat
+                              # it — we evolve and use Run Away Draw — so the +10 HP is free survival.
+_DUNSPARCE_ID_OLD     = 65    # legacy 60 HP Dunsparce (older builds). Both evolve into Dudunsparce,
+                              # so the draw-engine logic must recognise either id. See _DUNSPARCE_IDS.
+_DUNSPARCE_IDS        = (305, 65)  # any "Dunsparce" basic in our lists
 _DUDUNSPARCE_ID       = 66    # bench ability "Run Away Draw": draw 3 then bounce to deck
 _POKE_PAD_ID          = 1152  # Item: search a non-Rule-Box Pokémon to hand (Dudunsparce/Snorlax)
 _HOPS_CHOICE_BAND_ID  = 1171  # tool: -1 energy cost AND +30 dmg, Hop's only
@@ -261,7 +265,7 @@ def _score_attack(o: dict, state: dict) -> float:
 
     # The Dunsparce draw line must NEVER attack — it only evolves and draws (Run Away Draw).
     # If it's stuck Active we retreat it (see _score_retreat / _score_attach), never attack.
-    if my_act and my_act.get("id") in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
+    if my_act and my_act.get("id") in (_DUNSPARCE_ID, _DUNSPARCE_ID_OLD, _DUDUNSPARCE_ID):
         return -500.0
 
     # Meowth ex must NEVER attack — it is a consistency tutor only (Last-Ditch Catch fetches
@@ -683,7 +687,7 @@ def _hard_forbidden(o: dict, state: dict) -> bool:
     tid = (tgt or {}).get("id")
     if cid == _HOPS_CHOICE_BAND_ID and tid not in (_HOPS_PHANTUMP_ID, _HOPS_CRAMORANT_ID, _HOPS_TREVENANT_ID):
         return True
-    if cid is not None and db.is_energy(cid) and tid in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
+    if cid is not None and db.is_energy(cid) and tid in (_DUNSPARCE_ID, _DUNSPARCE_ID_OLD, _DUDUNSPARCE_ID):
         return True
     return False
 
@@ -798,7 +802,7 @@ def _hops_in_play(state: dict) -> bool:
     mp = my_state(state)
     ids = {(active_of(mp) or {}).get("id")}
     ids.update((b or {}).get("id") for b in (mp.get("bench") or []))
-    return bool(ids & {_DUNSPARCE_ID, _DUDUNSPARCE_ID, _HOPS_PHANTUMP_ID,
+    return bool(ids & {_DUNSPARCE_ID, _DUNSPARCE_ID_OLD, _DUDUNSPARCE_ID, _HOPS_PHANTUMP_ID,
                        _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID, _HOPS_SNORLAX_ID})
 
 
@@ -835,7 +839,8 @@ def _score_poke_pad(state: dict) -> float:
     completes a KO this turn). Otherwise it's a normal consistency item."""
     if not _hops_in_play(state):
         return 7.0
-    if _has_in_play(state, _DUNSPARCE_ID) and _DUDUNSPARCE_ID not in _hand_ids(state):
+    if (_has_in_play(state, _DUNSPARCE_ID) or _has_in_play(state, _DUNSPARCE_ID_OLD)) \
+            and _DUDUNSPARCE_ID not in _hand_ids(state):
         return 13.0  # fetch Dudunsparce to get the draw engine online
     if _snorlax_completes_ko(state):
         return 13.0  # fetch a Snorlax — its +30 turns this turn's attack into a KO
@@ -1228,7 +1233,7 @@ def _score_attach(o: dict, state: dict) -> float:
     # ---- NEVER energize the Dunsparce draw line. It must never attack and must never carry
     # energy — not even to pay a retreat. (The never-promote rules keep it off the Active.)
     _atgt = _attach_target()
-    if (_atgt or {}).get("id") in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
+    if (_atgt or {}).get("id") in (_DUNSPARCE_ID, _DUNSPARCE_ID_OLD, _DUDUNSPARCE_ID):
         return -50.0
 
     energy_cid = _card_id_from_option(o, state)
@@ -1332,7 +1337,7 @@ def _score_retreat(state: dict) -> float:
             return 8.0
 
     # Dunsparce/Dudunsparce stuck Active can't attack — retreat to a real Hop's attacker.
-    if act.get("id") in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
+    if act.get("id") in (_DUNSPARCE_ID, _DUNSPARCE_ID_OLD, _DUDUNSPARCE_ID):
         if any(b and (b or {}).get("id") in (_HOPS_PHANTUMP_ID, _HOPS_TREVENANT_ID, _HOPS_CRAMORANT_ID)
                for b in bench):
             return 9.0
@@ -1468,7 +1473,7 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
             # Dunsparce / Dudunsparce: bench-only draw line. Never promote to Active unless it's
             # the only legal choice (and since we never energize it, a stuck one can't retreat —
             # so it's doubly important to keep it off the Active Spot).
-            if cid in (_DUNSPARCE_ID, _DUDUNSPARCE_ID):
+            if cid in (_DUNSPARCE_ID, _DUNSPARCE_ID_OLD, _DUDUNSPARCE_ID):
                 return 1.0
 
             # Meowth ex: bench-only consistency tutor — 170 HP 2-prize bait if sent active.
