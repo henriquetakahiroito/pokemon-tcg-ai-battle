@@ -105,6 +105,7 @@ _DUNSPARCE_ID_OLD     = 65    # legacy 60 HP Dunsparce (older builds). Both evol
                               # so the draw-engine logic must recognise either id. See _DUNSPARCE_IDS.
 _DUNSPARCE_IDS        = (305, 65)  # any "Dunsparce" basic in our lists
 _DUDUNSPARCE_ID       = 66    # bench ability "Run Away Draw": draw 3 then bounce to deck
+_LT_SURGE_BARGAIN_ID  = 1226  # supporter: opp may take a Prize each, or you draw 4 (prize-bargain)
 _POKE_PAD_ID          = 1152  # Item: search a non-Rule-Box Pokémon to hand (Dudunsparce/Snorlax)
 _HOPS_CHOICE_BAND_ID  = 1171  # tool: -1 energy cost AND +30 dmg, Hop's only
 _BROCKS_SCOUTING_ID   = 1210  # supporter: search 2 basics OR 1 evolution to hand
@@ -192,6 +193,31 @@ _LUNATONE_ID         = 675   # ability Lunar Cycle: discard {F} → draw 3 (need
 _SOLROCK_ID          = 676
 _PREMIUM_POWER_PRO_ID = 1141  # Item: {F} attacks do +30 to the Active this turn
 _FIGHTING_GONG_ID    = 1142  # Item: search a Basic {F} Energy or Basic {F} Pokémon
+# ---- "Frankenstein" Lucario-Dunsparce hybrid: the regular draw line (Dunsparce 305/65 ->
+# Dudunsparce 66) is non-attacking, but Dudunsparce EX (306) is a real ANTI-EX attacker that
+# evolves from the same Dunsparce. Only this hybrid deck runs 306, so all 306 logic is inert
+# for Hops / pure Lucario. ----
+_DUDUNSPARCE_EX_ID   = 306   # Stage 1 ex, 270 HP. SITUATIONAL tech, not a main attacker.
+_TENACIOUS_TAIL      = 425   # {C} 60 × opponent's {ex}/{megaEx} — but BLOCKED by ex-wallers; use
+                             # only for an opportunistic KO vs a non-waller active.
+_DESTRUCTIVE_DRILL   = 426   # {C}{C}{C} 150, damage UNAFFECTED by the defender's effects → the
+                             # designated out vs ex-wallers (Crustle / Sylveon) that shut off our
+                             # Mega Lucario (an ex). Bypasses their "prevent damage from ex" ability.
+_EX_BLOCKER_IDS      = (345, 330)  # Crustle "Mysterious Rock Inn" / Sylveon "Safeguard": prevent
+                             # ALL damage from our ex Pokémon. Only Destructive Drill punches through.
+# ---- Turbo Archaludon (Dunsparce-engine Metal tank). Reuses the Dunsparce draw line + Dudunsparce
+# ex above; this block is the Archaludon attack/setup line. All gated on _archaludon_in_play. ----
+_DURALUDON_ID        = 169   # Basic; evolves into Archaludon / Archaludon ex
+_ARCHALUDON_EX_ID    = 190   # Stage 1 ex, 300 HP. Assemble Alloy (accel 2 {M} from discard on evolve)
+_ARCHALUDON_BABY_ID  = 170   # Stage 1, 180 HP. Iron Blaster 160 (single-prize hitter) + Metal Bridge
+_METAL_DEFENDER      = 253   # {M}{M}{M} 220, removes own Weakness next turn — the main attack
+_IRON_BLASTER        = 225   # {M}{M}{M} 160 — baby Archaludon, efficient vs single-prizers
+_MEGA_MAWILE_ID      = 695   # Basic ex, 270 HP. Closer.
+_GOBBLE_DOWN         = 1006  # {M}{M} 80 × Prize cards YOU have taken (320 at 4 taken = game-ender)
+_HUGE_BITE           = 1007  # {M}{M}{M} 260
+_RELICANTH_ID        = 57    # Memory Dive: evolved mons may use a previous stage's attack (Raging Hammer)
+_FULL_METAL_LAB_ID   = 1244  # Stadium: {M} Pokémon take 30 less from the opponent (the tank's wall)
+_METAL_ENERGY_ID     = 8     # Basic {M} Energy
 _CARMINE_ID          = 1192  # Supporter: (going first, T1 usable) discard hand, draw 5
 _DUSK_BALL_ID        = 1102  # Item: look at bottom 7, take a Pokémon
 _GRAVITY_MOUNTAIN_ID = 1252  # Stadium: every Stage 2 in play gets -30 HP
@@ -346,6 +372,63 @@ def _score_attack(o: dict, state: dict) -> float:
                 return 102.0 + dmg / 100.0   # the finisher: use when Aura Jab's 130 can't KO
             return 60.0 + dmg / 10.0
         return 55.0
+
+    # ---- Dudunsparce ex (Frankenstein hybrid): SITUATIONAL tech, not a main attacker. Mega
+    # Lucario is the engine; the ex only earns a turn (a) to punch through an ex-waller
+    # (Crustle/Sylveon) with Destructive Drill, or (b) for an opportunistic Tenacious Tail KO. ----
+    if aid == _TENACIOUS_TAIL:
+        # {C} for 60 × opponent's ex in play — but ex-wallers prevent it (it's not "unaffected").
+        # So only fire it for an immediate KO of a NON-waller active. Never fish with it.
+        if _opp_active_blocks_ex(state):
+            return -200.0                      # walled: does 0 — use Destructive Drill instead
+        dmg = 60 * _count_opp_ex(state)
+        if my_act and op_act and dmg > 0 and dmg >= op_act.get("hp", 9999):
+            return 104.0 + dmg / 100.0         # the "window of opportunity" 1-energy KO
+        return 3.0                             # no KO: leave the attacking to Mega Lucario
+    if aid == _DESTRUCTIVE_DRILL:
+        # {C}{C}{C} 150, ignores the defender's effects → THE out vs an ex-waller. Otherwise it's
+        # an expensive 150 we'd rather not spend when Mega Lucario (130 cheap / 270 finisher) is up.
+        if my_act and op_act:
+            ko = 150 >= op_act.get("hp", 9999)
+            if _opp_active_blocks_ex(state):
+                return (103.0 if ko else 80.0) + 150 / 100.0   # only thing that hits the wall
+            if ko:
+                return 96.0 + 150 / 100.0       # opportunistic KO through any effect
+            return 8.0                          # otherwise save it; Mega Lucario is the attacker
+        return 8.0
+
+    # ---- Turbo Archaludon attack line. ----
+    if aid == _METAL_DEFENDER:
+        # {M}{M}{M} 220 — the bread-and-butter. KOs most of the meta; tank does it repeatedly.
+        if my_act and op_act:
+            dmg = attack_damage_estimate(my_act["id"], op_act["id"], 220)
+            if dmg >= op_act.get("hp", 9999):
+                return 103.0 + dmg / 100.0
+            return 60.0 + dmg / 10.0
+        return 55.0
+    if aid == _IRON_BLASTER:
+        # baby Archaludon {M}{M}{M} 160 — efficient against single-prizers / chip.
+        if my_act and op_act:
+            dmg = attack_damage_estimate(my_act["id"], op_act["id"], 160)
+            if dmg >= op_act.get("hp", 9999):
+                return 101.0 + dmg / 100.0
+            return 40.0 + dmg / 10.0
+        return 35.0
+    if aid == _GOBBLE_DOWN:
+        # Mega Mawile {M}{M} 80 × Prizes WE'VE taken — the closer. 240 at 3 taken, 320 at 4.
+        dmg = 80 * _prizes_taken(state)
+        if my_act and op_act and dmg > 0:
+            if dmg >= op_act.get("hp", 9999):
+                return 105.0 + dmg / 100.0   # game-ending KO — the best line when it connects
+            return 30.0 + dmg / 10.0
+        return 4.0                            # 0 prizes taken: does nothing
+    if aid == _HUGE_BITE:
+        if my_act and op_act:
+            dmg = attack_damage_estimate(my_act["id"], op_act["id"], 260)
+            if dmg >= op_act.get("hp", 9999):
+                return 102.0 + dmg / 100.0
+            return 50.0 + dmg / 10.0
+        return 45.0
 
     if aid == _ANNI_DESTINED:
         # Both active KO'd: great when we trade Slowking (1 prize) into a 2-prize ex / fat wall.
@@ -610,6 +693,38 @@ def _ko_prize_value(db, cid: int) -> int:
     except Exception:
         pass
     return 1
+
+
+def _count_opp_ex(state: dict) -> int:
+    """Number of opponent {ex}/{megaEx} Pokémon in play (active + bench). Drives Dudunsparce ex's
+    Tenacious Tail (60 damage each). In the current ex-flooded meta this is usually 1-3."""
+    db = get_db()
+    op = opp_state(state)
+    n = 0
+    for p in [active_of(op)] + list(op.get("bench") or []):
+        if not p:
+            continue
+        try:
+            c = db.card(p.get("id"))
+            if getattr(c, "megaEx", False) or getattr(c, "ex", False):
+                n += 1
+        except Exception:
+            pass
+    return n
+
+
+def _opp_active_blocks_ex(state: dict) -> bool:
+    """Opponent's ACTIVE is an ex-waller (Crustle / Sylveon) that prevents all damage from our ex
+    Pokémon — so Mega Lucario does 0 and only Dudunsparce ex's Destructive Drill gets through."""
+    a = active_of(opp_state(state))
+    return bool(a and a.get("id") in _EX_BLOCKER_IDS)
+
+
+def _opp_has_ex_blocker(state: dict) -> bool:
+    """Ex-waller anywhere in the opponent's play (active or bench) — cue to prep Dudunsparce ex."""
+    op = opp_state(state)
+    return any((p or {}).get("id") in _EX_BLOCKER_IDS
+               for p in [active_of(op)] + list(op.get("bench") or []))
 
 
 def _opp_bench_ko_available(state: dict) -> bool:
@@ -941,6 +1056,20 @@ def _lucario_in_play(state: dict) -> bool:
                for p in [active_of(mp)] + list(mp.get("bench") or []))
 
 
+def _archaludon_in_play(state: dict) -> bool:
+    """True if we're piloting the turbo Archaludon deck (Duraludon / Archaludon in play or just an
+    Archaludon line on board). Gates all the Metal-tank scoring below."""
+    mp = my_state(state)
+    return any((p or {}).get("id") in (_DURALUDON_ID, _ARCHALUDON_EX_ID, _ARCHALUDON_BABY_ID)
+               for p in [active_of(mp)] + list(mp.get("bench") or []))
+
+
+def _prizes_taken(state: dict) -> int:
+    """How many Prize cards WE have already taken (6 minus our remaining). Drives Mega Mawile's
+    Gobble Down (80 × prizes taken) — the closer fires for 240-320 once we're 3-4 prizes in."""
+    return 6 - len(my_state(state).get("prize") or [])
+
+
 def _opp_is_lucario(state: dict) -> bool:
     """True if the OPPONENT is the Mega Lucario deck (Riolu / Mega Lucario in play). Used for the
     Hops vs Lucario gameplan: Phantump stalls, Trevenant finishes, Cramorant only snipes support."""
@@ -1035,6 +1164,37 @@ def _lucario_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
     return None
 
 
+def _archaludon_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
+    """Bespoke play priorities for turbo Archaludon. Returns None to fall through to generic /
+    the shared Dunsparce-engine scoring (Poké Pad, Boss, Lillie, Ultra Ball … handled elsewhere)."""
+    mp = my_state(state)
+    have_arch = any((p or {}).get("id") == _ARCHALUDON_EX_ID
+                    for p in [active_of(mp)] + list(mp.get("bench") or []))
+    if cid == _FULL_METAL_LAB_ID:
+        # Our wall stadium (−30 to our Metal). High when it isn't already ours — also bounces an
+        # opponent's stadium, which this deck loves. Slightly higher once Archaludon is the tank.
+        if _stadium_in_play(state, _FULL_METAL_LAB_ID):
+            return 1.0
+        return 12.0 if have_arch else 9.0
+    if cid == _MEGA_MAWILE_ID:
+        # Closer: only bench it when Gobble Down is live (we've taken ≥3 prizes → 240+). It's a
+        # 270 HP 2-prize liability otherwise, so don't drop it early.
+        return 14.0 if _prizes_taken(state) >= 3 else (2.0 if bench_n < 5 else -1.0)
+    if cid == _DURALUDON_ID:
+        # Lay Duraludon early/often — it's the body that becomes Archaludon. Keep a spare benched
+        # so a KO'd tank is replaced next turn without losing tempo.
+        return 13.0 - 1.5 * bench_n if bench_n < 5 else -1.0
+    if cid == _RELICANTH_ID:
+        return 6.0 if bench_n < 5 else -1.0          # situational (Memory Dive → Raging Hammer)
+    return None
+
+
+def _stadium_in_play(state: dict, sid: int) -> bool:
+    """True if the given stadium is currently in play (regardless of owner — Full Metal Lab's
+    −30 is symmetric, so if it's already up we don't need to replay it)."""
+    return any((c or {}).get("id") == sid for c in (state.get("stadium") or []))
+
+
 def _opp_uses_effect_damage(state: dict) -> bool:
     """True if opponent's active Pokémon's best attack deals 0 direct damage (effect-based).
 
@@ -1078,6 +1238,10 @@ def _score_play(o: dict, state: dict) -> float:
             return s
     if _lucario_in_play(state):
         s = _lucario_play_score(cid, state, hand_n, bench_n)
+        if s is not None:
+            return s
+    if _archaludon_in_play(state):
+        s = _archaludon_play_score(cid, state, hand_n, bench_n)
         if s is not None:
             return s
     if name == "POKEMON":
@@ -1235,6 +1399,19 @@ def _score_attach(o: dict, state: dict) -> float:
     _atgt = _attach_target()
     if (_atgt or {}).get("id") in (_DUNSPARCE_ID, _DUNSPARCE_ID_OLD, _DUDUNSPARCE_ID):
         return -50.0
+
+    # ---- Turbo Archaludon: load Metal energy onto the tank. The active Archaludon (toward its
+    # 3-energy Metal Defender) comes first; a benched Duraludon/Archaludon is good prep so the
+    # next tank is ready when the current one falls. (Assemble Alloy also refuels on evolve.)
+    if _archaludon_in_play(state) and _card_id_from_option(o, state) == _METAL_ENERGY_ID:
+        tid = (_atgt or {}).get("id")
+        need = max(0, 3 - total_energy(_atgt)) if _atgt else 0
+        if tid == _ARCHALUDON_EX_ID:
+            return (16.0 if in_play_area == 4 else 11.0) + max(0, 3 - need)  # active first, fewer-need first
+        if tid == _DURALUDON_ID:
+            return 9.0                              # prep the next body
+        if tid in (_MEGA_MAWILE_ID, _ARCHALUDON_BABY_ID):
+            return 8.0
 
     energy_cid = _card_id_from_option(o, state)
 
@@ -1419,6 +1596,22 @@ def _score_main_option(o: dict, state: dict) -> float:
     if t == OptionType.ABILITY.value:
         return _score_ability(o, state)
     if t == OptionType.EVOLVE.value:
+        # Dudunsparce EX is situational tech: only make it when there's an ex-waller to break
+        # (prep Destructive Drill) or a Tenacious Tail KO available. Otherwise prefer the plain
+        # draw-engine Dudunsparce (don't burn the Dunsparce on a card we won't attack with).
+        ev_id = _card_id_from_option(o, state)
+        if ev_id == _DUDUNSPARCE_EX_ID:
+            if _opp_has_ex_blocker(state):
+                return 17.0                    # prep the wall-breaker
+            op = opp_state(state); oa = active_of(op)
+            dmg = 60 * _count_opp_ex(state)
+            if oa and dmg >= oa.get("hp", 9999):
+                return 15.0                    # KO window now
+            return 0.5                         # else never make it — save the Dunsparce for draw
+        # Archaludon ex: the deck's whole plan. Evolve Duraludon into it ASAP (Assemble Alloy
+        # also pulls 2 {M} back from discard — that's the turbo). Top priority for this deck.
+        if ev_id == _ARCHALUDON_EX_ID:
+            return 20.0
         return 11.0
     if t == OptionType.RETREAT.value:
         return _score_retreat(state)
@@ -1429,7 +1622,8 @@ def _score_main_option(o: dict, state: dict) -> float:
     return 4.0
 
 
-def _score_yesno(o: dict, ctx: int) -> float:
+def _score_yesno(o: dict, ctx: int, state: dict | None = None,
+                 context_card: int | None = None) -> float:
     is_yes = (o.get("type") == OptionType.YES.value)
     # default YES for beneficial activations; specific contexts overridden below
     if ctx == SelectContext.MULLIGAN.value:
@@ -1437,7 +1631,23 @@ def _score_yesno(o: dict, ctx: int) -> float:
         # Explosiveness ability even with no Staryu — never throw it away here.
         return 1.0 if not is_yes else 0.0          # keep hand
     if ctx == SelectContext.IS_FIRST.value:
-        return 1.0 if is_yes else 0.0              # go first
+        # Go first. Our proactive engine decks (Hops swarm, Lucario aggro) want the extra
+        # setup tempo; they don't rely on a turn-1 attack, so first > second.
+        return 1.0 if is_yes else 0.0
+    # Board-aware: an opponent's Lt. Surge's Bargain asks us "each player takes a Prize?"
+    # YES = we BOTH take a Prize; NO = the opponent draws 4 cards. Trading a mutual Prize
+    # only helps us when we are AHEAD or even in the race (fewer Prizes left = closer to
+    # winning); when behind, accelerating the Prize race favours the leader (them), so deny
+    # it and let them merely draw. (Default-YES would blindly hand a leading opponent a Prize.)
+    if context_card == _LT_SURGE_BARGAIN_ID and state is not None:
+        try:
+            my_pr = len(my_state(state).get("prize") or [])
+            op_pr = len(opp_state(state).get("prize") or [])
+        except Exception:
+            return 1.0 if is_yes else 0.0
+        if my_pr <= op_pr:                          # ahead/even: take the mutual Prize
+            return 1.0 if is_yes else 0.0
+        return 1.0 if not is_yes else 0.0           # behind: deny the race
     # ACTIVATE / FIRST_EFFECT / COIN_HEAD / others: prefer YES
     return 1.0 if is_yes else 0.0
 
@@ -1475,6 +1685,27 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
             # so it's doubly important to keep it off the Active Spot).
             if cid in (_DUNSPARCE_ID, _DUNSPARCE_ID_OLD, _DUDUNSPARCE_ID):
                 return 1.0
+
+            # Dudunsparce EX: a SITUATIONAL attacker, not the default. Promote it only to break an
+            # ex-waller (Destructive Drill) or to land a Tenacious Tail KO this turn — otherwise
+            # keep Mega Lucario active and leave the ex on the bench (240 HP body) or unmade.
+            if cid == _DUDUNSPARCE_EX_ID:
+                if _opp_active_blocks_ex(state):
+                    return 38.0                # the only thing that hits through the wall
+                _oa = active_of(op)
+                dmg = 60 * _count_opp_ex(state)
+                if _oa and dmg >= _oa.get("hp", 9999):
+                    return 34.0                # opportunistic KO window
+                return 2.0                     # no reason to promote it over Mega Lucario
+
+            # Turbo Archaludon: the Archaludon ex tank is the default promote (220 attacker behind
+            # Full Metal Lab). Mega Mawile only when its Gobble Down closer is live (≥3 prizes taken).
+            if cid == _ARCHALUDON_EX_ID:
+                return 36.0
+            if cid == _ARCHALUDON_BABY_ID:
+                return 18.0                    # Iron Blaster 160 — fine secondary / single-prize
+            if cid == _MEGA_MAWILE_ID:
+                return 34.0 if _prizes_taken(state) >= 3 else 6.0
 
             # Meowth ex: bench-only consistency tutor — 170 HP 2-prize bait if sent active.
             if cid == _MEOWTH_EX_ID:
@@ -1631,7 +1862,9 @@ def option_scores(obs: dict) -> list[float]:
     for o in opts:
         t = o.get("type")
         if t in (OptionType.YES.value, OptionType.NO.value):
-            s = _score_yesno(o, ctx)
+            _cc = sel.get("contextCard")
+            _cc_id = _cc.get("id") if isinstance(_cc, dict) else _cc
+            s = _score_yesno(o, ctx, state, _cc_id)
         elif t in (OptionType.CARD.value, OptionType.TOOL_CARD.value, OptionType.ENERGY_CARD.value):
             s = _score_card_select(o, ctx, state)
         elif t == OptionType.ENERGY.value:
