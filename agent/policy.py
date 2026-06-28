@@ -210,6 +210,7 @@ _EX_BLOCKER_IDS      = (345, 330)  # Crustle "Mysterious Rock Inn" / Sylveon "Sa
 _DURALUDON_ID        = 169   # Basic; evolves into Archaludon / Archaludon ex
 _ARCHALUDON_EX_ID    = 190   # Stage 1 ex, 300 HP. Assemble Alloy (accel 2 {M} from discard on evolve)
 _ARCHALUDON_BABY_ID  = 170   # Stage 1, 180 HP. Iron Blaster 160 (single-prize hitter) + Metal Bridge
+_DURALUDON_ATTACKS   = (223, 224)  # Hammer In 30 / Raging Hammer 80 — Duraludon's own weak attacks
 _METAL_DEFENDER      = 253   # {M}{M}{M} 220, removes own Weakness next turn — the main attack
 _IRON_BLASTER        = 225   # {M}{M}{M} 160 — baby Archaludon, efficient vs single-prizers
 _MEGA_MAWILE_ID      = 695   # Basic ex, 270 HP. Closer.
@@ -398,6 +399,13 @@ def _score_attack(o: dict, state: dict) -> float:
         return 8.0
 
     # ---- Turbo Archaludon attack line. ----
+    # Don't waste the turn attacking with a raw Duraludon (Hammer In 30) when we can evolve it into
+    # the 220 Archaludon ex this turn — that tempo leak is the #1 prior mistake. Suppress its own
+    # attacks while an Archaludon ex is in hand; if no evolution is available, Hammer In chip is OK.
+    if aid in _DURALUDON_ATTACKS:
+        if _archaludon_in_play(state) and _ARCHALUDON_EX_ID in _hand_ids(state):
+            return 2.0
+        # no evolution in hand: let the generic scorer value the chip (fall through)
     if aid == _METAL_DEFENDER:
         # {M}{M}{M} 220 — the bread-and-butter. KOs most of the meta; tank does it repeatedly.
         if my_act and op_act:
@@ -1186,6 +1194,13 @@ def _archaludon_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
         return 13.0 - 1.5 * bench_n if bench_n < 5 else -1.0
     if cid == _RELICANTH_ID:
         return 6.0 if bench_n < 5 else -1.0          # situational (Memory Dive → Raging Hammer)
+    if cid == _MEOWTH_EX_ID:
+        # Consistency tutor (Last-Ditch Catch: fetch a Supporter on bench-play). The turbo deck
+        # leans on it to find Carmine/Boss/Lillie — the Hops rule (Boss-only) badly undervalues it
+        # here. Play it freely while the bench has room; ease off as we develop (2-prize body).
+        if bench_n >= 5:
+            return -1.0
+        return 12.0 - 1.5 * bench_n
     return None
 
 
