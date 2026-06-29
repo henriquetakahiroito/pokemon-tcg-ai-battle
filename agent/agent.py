@@ -157,10 +157,34 @@ def _make_agent():
     return cls(deck=read_deck(), seed=random.randrange(1 << 30))
 
 
+def _safe_fallback(obs_dict: dict) -> list[int]:
+    """Last-resort legal selection so a pilot crash never marks the submission as Error (a single
+    uncaught exception ends the agent on the leaderboard). Returns minCount valid, non-duplicate
+    option indices — preferring an END option if one exists, else the lowest indices."""
+    try:
+        sel = obs_dict.get("select") or {}
+        opts = sel.get("option") or []
+        n = len(opts)
+        if n == 0:
+            return []
+        need = max(1, int(sel.get("minCount", 1) or 1))
+        # prefer ending the turn if that's an option (safest no-op)
+        for i, o in enumerate(opts):
+            if isinstance(o, dict) and o.get("type") == _END_T and need == 1:
+                return [i]
+        return list(range(min(need, n)))
+    except Exception:
+        return [0]
+
+
 def agent(obs_dict: dict) -> list[int]:
     global _AGENT
-    if _AGENT is None:
-        _AGENT = _make_agent()
-    if obs_dict.get("select") is None:
-        return list(_AGENT.deck)  # initial deck selection
-    return _AGENT.decide(obs_dict)
+    try:
+        if _AGENT is None:
+            _AGENT = _make_agent()
+        if obs_dict.get("select") is None:
+            return list(_AGENT.deck)  # initial deck selection
+        return _AGENT.decide(obs_dict)
+    except Exception:
+        # NEVER crash: a raised exception = "Error" status = the submission stops playing.
+        return _safe_fallback(obs_dict)

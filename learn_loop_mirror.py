@@ -121,19 +121,23 @@ def duel(hero, cand_path, best_path, n, seed):
     return r.winrate_a()
 
 
-def field_winrate(hero, weights_path, seed, per_deck=6):
-    """META-WEIGHTED win-rate of a SPECIFIC value net (weights_path) vs the real netdecks. This is
-    the TRUE objective — and it is NOT ceiling-capped, because the MegaStarmie matchup (26% weight)
-    has real headroom. We gate promotions on THIS, not on a mirror duel (mirror strength != field
-    strength: a net that beats its own kind can still regress vs the meta — that pathology is why
-    an early 'promotion' tanked the field score)."""
+def field_winrate(hero, weights_path, seed, per_deck=6, opp_agent="mcts"):
+    """META-WEIGHTED win-rate of a SPECIFIC value net (weights_path) vs the real netdecks.
+
+    opp_agent="mcts" pilots the opponent netdecks with MctsAgent (REAL pressure). This is the
+    honest gate: GreedyAgent is too passive to lose (it showed 100% vs MegaLucario where MCTS
+    shows 50% and humans 14%), so greedy gating gave a fake 98% ceiling with no signal. MCTS
+    opponents expose the hard matchups (Lucario/Dragapult) where the value net actually has room
+    to learn. Slower (~2 min/game) — keep per_deck small. opp_agent="greedy" is the fast/old mode."""
     from agent.agent import MctsAgent
     from selfplay.baselines import GreedyAgent
     efn = eval_fn_from(weights_path)
     num = den = 0.0
     for fn, wt in FIELD_W:
         h = MctsAgent(deck=hero, seed=seed, eval_fn=efn)
-        f = GreedyAgent(deck=read_deck(os.path.join(ROOT, fn)), seed=seed + 100)
+        opp_deck = read_deck(os.path.join(ROOT, fn))
+        f = (MctsAgent(deck=opp_deck, seed=seed + 100) if opp_agent == "mcts"
+             else GreedyAgent(deck=opp_deck, seed=seed + 100))
         r = play_match(h, f, n_games=per_deck, alternate=True)
         num += r.winrate_a() * wt; den += wt
     return num / den if den else 0.0
@@ -143,13 +147,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--iters", type=int, default=30)
     ap.add_argument("--games", type=int, default=300, help="self-play games for data per iter")
-    ap.add_argument("--duels", type=int, default=16, help="candidate-vs-best games (gating)")
-    ap.add_argument("--winbar", type=float, default=0.55, help="promote candidate if it beats best by this")
+    ap.add_argument("--duels", type=int, default=16, help="(legacy name) total eval games -> per_deck = duels//6")
+    ap.add_argument("--winbar", type=float, default=0.55, help="(unused; promotion = beats champ field win-rate)")
+    ap.add_argument("--opp-agent", default="mcts", choices=["mcts", "greedy"],
+                    help="who pilots the opponent netdecks in eval: mcts = honest pressure (slow), greedy = fast/old")
+    ap.add_argument("--hero", default=HERO, help="hero decklist to train/improve (e.g. deck_meta_real_megalucario.csv)")
     ap.add_argument("--buffer", type=int, default=4)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
+    per_deck = max(2, args.duels // 6)   # MCTS eval is slow (~2 min/game) — keep games/deck small
 
-    hero = read_deck(os.path.join(ROOT, HERO))
+    hero = read_deck(os.path.join(ROOT, args.hero))
+    print(f"[hero] {args.hero}", flush=True)
     # weighted opponent pool: each real meta deck repeated by its field % -> self-play samples it
     # at the rate it actually appears on ladder (MegaStarmie 26x, Dragapult 7x, ...).
     opps = []
@@ -159,8 +168,8 @@ def main():
     buf_X, buf_y = [], []
     promotions = 0
 
-    champ_ref = field_winrate(hero, BEST, args.seed, per_deck=args.duels // 3 or 4)
-    print(f"[start] champion meta-weighted win-rate = {champ_ref:.0%} (real netdecks; MegaStarmie has headroom)", flush=True)
+    champ_ref = field_winrate(hero, BEST, args.seed, per_deck=per_deck, opp_agent=args.opp_agent)
+    print(f"[start] champion meta-weighted win-rate = {champ_ref:.0%} (vs {args.opp_agent} opponents, {per_deck}/deck; honest pressure)", flush=True)
     new = not os.path.exists(LOG); lf = open(LOG, "a", newline=""); lw = csv.writer(lf)
     if new: lw.writerow(["iter", "states", "cand_field_wr", "champ_field_wr", "promoted", "promotions"])
 
@@ -171,7 +180,7 @@ def main():
         Xall, yall = np.concatenate(buf_X), np.concatenate(buf_y)
         np.savez(CAND, **train(Xall, yall, seed=args.seed))
         # GATE on the real objective: candidate's meta-weighted field win-rate vs the champion's.
-        cand_ref = field_winrate(hero, CAND, args.seed + it, per_deck=args.duels // 3 or 4)
+        cand_ref = field_winrate(hero, CAND, args.seed + it, per_deck=per_deck, opp_agent=args.opp_agent)
         promoted = cand_ref >= champ_ref + 0.01      # must actually beat the champion on the field
         if promoted:
             shutil.copyfile(CAND, BEST)                       # candidate becomes the champion

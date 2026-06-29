@@ -59,6 +59,7 @@ class C:
 
 
 MEGA_BRAVE = 983
+MAKUHITA_CORKSCREW = 976   # Makuhita's 10-damage attack — never worth a turn; evolve to Hariyama
 LOW_DECK_COUNT = 10
 
 # Abra/Kadabra-kill priority: deny the Psychic/Alakazam line (Lucario is x2 weak to Psychic).
@@ -385,6 +386,12 @@ class LucarioPolicy:
         if option.type == OptionType.RETREAT:
             return 2000 if self.plan.attacker >= 1 else -1
         if option.type == OptionType.ATTACK:
+            # Makuhita's Corkscrew Punch (976) is 10 damage — never worth a turn over developing /
+            # evolving to Hariyama. Real ladder losses showed the agent throwing it 7% of the time
+            # (vs 2% in wins) when no real attack was planned. Score it below END so we don't waste
+            # the turn; it is still chosen if it is genuinely the only legal action.
+            if option.attackId == MAKUHITA_CORKSCREW and self.plan.attacker < 1:
+                return -1
             return 1100 if (option.attackId == MEGA_BRAVE) == (self.plan.attack_index == 1) else 1000
         return 0
 

@@ -432,7 +432,10 @@ def _score_attack(o: dict, state: dict) -> float:
             raging = attack_damage_estimate(my_act["id"], op_act["id"], 80 + counters_dmg) if my_act else 80 + counters_dmg
             if raging >= op_act.get("hp", 9999):
                 return 104.0 + raging / 100.0     # scaled KO finisher — prefer it over a non-lethal MD
-            return 50.0 + raging / 10.0           # heavy chip; the more damage on them, the better
+            # non-lethal: score by ACTUAL damage (same base as Metal Defender) so the bigger hit
+            # wins. Once the target carries enough counters, Raging (80+counters) out-damages MD's
+            # 220 and should be chosen — this is the chip-vs-scale nuance Shumpei plays and we missed.
+            return 60.0 + raging / 10.0
     if aid == _METAL_DEFENDER:
         # {M}{M}{M} 220 — the bread-and-butter. KOs most of the meta; tank does it repeatedly.
         if my_act and op_act:
@@ -1233,6 +1236,9 @@ def _archaludon_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
     need_arch = (not have_arch and _ARCHALUDON_EX_ID not in _hand_ids(state))
     if cid == _ULTRA_BALL_ID and need_arch:          # Ultra Ball: THE dig for the engine
         return 17.0
+    # NOTE: a "conserve when set up" rule (drop Ultra Ball/Pokegear/Carmine below END once the tank
+    # is online) was tried here from Shumpei's pass-heavy play — it REGRESSED the MCTS-Starmie
+    # matchup hard (under-digging vs a pressuring opponent), so it was reverted. Keep digging.
     if cid == _FULL_METAL_LAB_ID:
         # Our wall stadium (−30 to our Metal). High when it isn't already ours — also bounces an
         # opponent's stadium, which this deck loves. Slightly higher once Archaludon is the tank.
@@ -1250,12 +1256,13 @@ def _archaludon_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
     if cid == _RELICANTH_ID:
         if bench_n >= 5:
             return -1.0
-        # Memory Dive enables Raging Hammer — THE answer to a 330 Mega Starmie our Metal Defender
-        # (220) can't one-shot. Get it down early vs Starmie so the scaled finisher is available.
+        # Memory Dive enables Raging Hammer — THE answer to a high-HP 3-prize Mega our Metal
+        # Defender (220) can't one-shot (Mega Starmie 330, Mega Lucario 340). Get Relicanth down
+        # early vs those so the scaled finisher (80 + damage counters) is available to close.
         op = opp_state(state)
-        opp_has_starmie = any((p or {}).get("id") == _MEGA_STARMIE_ID
-                              for p in [active_of(op)] + list(op.get("bench") or []))
-        return 13.0 if opp_has_starmie else 6.0
+        opp_big_mega = any((p or {}).get("id") in (_MEGA_STARMIE_ID, _MEGA_LUCARIO_ID)
+                           for p in [active_of(op)] + list(op.get("bench") or []))
+        return 13.0 if opp_big_mega else 6.0
     if cid == _MEOWTH_EX_ID:
         # Consistency tutor (Last-Ditch Catch: fetch a Supporter on bench-play). The turbo deck
         # leans on it to find Carmine/Boss/Lillie — the Hops rule (Boss-only) badly undervalues it
