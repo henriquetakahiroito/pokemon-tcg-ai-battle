@@ -6,7 +6,7 @@ Columns: episode, p0, p1, my_seat(if H.Ito), my_deck, opp_archetype, winner, res
 import sys, json, glob, os, csv; sys.path.insert(0,'.'); sys.stdout.reconfigure(encoding='utf-8')
 from collections import Counter
 from agent.cards import get_db
-db=get_db(); DL=r'C:\Users\Henrique\Downloads'; IDX='_replay_index.csv'
+db=get_db(); DL=r'C:\Users\Henrique\Downloads\JSONMatchreplays'; IDX='_replay_index.csv'
 def arch(deck):
     c=Counter(deck)
     if c.get(1031,0): return 'MegaStarmie'
@@ -19,6 +19,7 @@ def arch(deck):
     if c.get(66,0) and c.get(879,0): return 'Hops'
     if c.get(163,0) or c.get(144,0): return 'Slowking'
     if c.get(345,0): return 'Crustle'
+    if c.get(169,0) or c.get(190,0): return 'Archaludon'
     if c.get(164,0): return 'Comfey'
     return 'other:'+str([x for x,_ in c.most_common(4) if x>20][:3])
 def deck_of(d,i):

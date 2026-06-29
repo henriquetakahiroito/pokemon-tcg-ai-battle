@@ -218,6 +218,14 @@ _GOBBLE_DOWN         = 1006  # {M}{M} 80 × Prize cards YOU have taken (320 at 4
 _HUGE_BITE           = 1007  # {M}{M}{M} 260
 _RELICANTH_ID        = 57    # Memory Dive: evolved mons may use a previous stage's attack (Raging Hammer)
 _FULL_METAL_LAB_ID   = 1244  # Stadium: {M} Pokémon take 30 less from the opponent (the tank's wall)
+_ARCHALUDON_BABY_IDS = (170, 840)  # 170 Iron Blaster 160 / 840 Iron Defender (120 + immune to Basics)
+_FEZ_EX_ID           = 140   # Fezandipiti ex: bench-only draw engine (Flip the Script). 2-prize bait.
+_SCOOP_UP_CYCLONE_ID = 1093  # Ace Spec: bounce 1 OWN Pokémon+cards to hand. Heal/reset — NOT a way
+                             # to throw away our own attacker; only when the active is doomed.
+_LUMIOSE_CITY_ID     = 1267  # Stadium: each turn search a Basic to bench (turn-1 develop a body)
+_PETREL_ID           = 1219  # Supporter: search any Trainer (find Boss / Black Belt / Ace)
+_BLACK_BELT_ID       = 1211  # Supporter: +40 dmg to opp Active ex this turn (one-shot enabler)
+_JUMBO_ICE_CREAM_ID  = 1147  # Item: heal damage from your Pokémon — keeps the 400-HP tank alive
 _METAL_ENERGY_ID     = 8     # Basic {M} Energy
 _CARMINE_ID          = 1192  # Supporter: (going first, T1 usable) discard hand, draw 5
 _DUSK_BALL_ID        = 1102  # Item: look at bottom 7, take a Pokémon
@@ -403,9 +411,28 @@ def _score_attack(o: dict, state: dict) -> float:
     # the 220 Archaludon ex this turn — that tempo leak is the #1 prior mistake. Suppress its own
     # attacks while an Archaludon ex is in hand; if no evolution is available, Hammer In chip is OK.
     if aid in _DURALUDON_ATTACKS:
-        if _archaludon_in_play(state) and _ARCHALUDON_EX_ID in _hand_ids(state):
-            return 2.0
-        # no evolution in hand: let the generic scorer value the chip (fall through)
+        active_is_raw_duraludon = bool(my_act) and my_act.get("id") == _DURALUDON_ID
+        # Raging Hammer (224) on an EVOLVED Archaludon ex is the Relicanth Memory-Dive tank line —
+        # that is a real attacker, not the failure mode. Only the RAW Duraludon swing is the stall.
+        if active_is_raw_duraludon:
+            ko = bool(op_act) and 80 >= op_act.get("hp", 9999) and aid == 224
+            if ko:
+                return 95.0 + 80 / 100.0       # a genuine KO with the body is still worth taking
+            if _ARCHALUDON_EX_ID in _hand_ids(state):
+                return 2.0                      # evolution in hand THIS turn — never chip, evolve
+            # not evolved, no KO: this is the tempo leak the user flagged. Bury it so the agent
+            # sets up / digs for Archaludon ex instead of stalling on Duraludon's weak attack.
+            return 1.0
+        # active already EVOLVED (Archaludon ex using Duraludon's Raging Hammer via Relicanth's
+        # Memory Dive). Raging Hammer = 80 + 10 x damage-counters on the defender = 80 + (maxHp-hp).
+        # The generic estimator can't see this scaling, so compute it: it's THE finisher that breaks
+        # a 330 Mega Starmie once it's been chipped (e.g. 330 at <=205 HP -> 80+125 = 205 KO).
+        if aid == 224 and op_act:
+            counters_dmg = max(0, (op_act.get("maxHp", op_act.get("hp", 0)) or 0) - op_act.get("hp", 0))
+            raging = attack_damage_estimate(my_act["id"], op_act["id"], 80 + counters_dmg) if my_act else 80 + counters_dmg
+            if raging >= op_act.get("hp", 9999):
+                return 104.0 + raging / 100.0     # scaled KO finisher — prefer it over a non-lethal MD
+            return 50.0 + raging / 10.0           # heavy chip; the more damage on them, the better
     if aid == _METAL_DEFENDER:
         # {M}{M}{M} 220 — the bread-and-butter. KOs most of the meta; tank does it repeatedly.
         if my_act and op_act:
@@ -793,7 +820,23 @@ def _hard_forbidden(o: dict, state: dict) -> bool:
     is ignored — they must be FILTERED OUT of the candidate list (see MctsAgent.decide). Covers:
       - Hop's Choice Band on anything other than an attacking Hop's Pokémon (Phantump/Cramorant/
         Trevenant). Replay 81913147 showed it on Meowth ex / Dunsparce / Dudunsparce.
-      - Any energy attached to the Dunsparce draw line (it must never carry energy)."""
+      - Any energy attached to the Dunsparce draw line (it must never carry energy).
+      - Attacking with a RAW Duraludon's own weak attack (Hammer In 223 / Raging Hammer 224) when
+        an Archaludon ex sits in hand ready to evolve THIS turn. Chipping 30 instead of evolving
+        into the 220 Metal Defender is materially neutral (it doesn't lose on the spot, so the
+        rollout won't punish it) yet it is the #1 ladder mistake — must be filtered, not down-scored.
+        A genuine KO with the body, or having no Archaludon ex to evolve into, stays legal."""
+    if o.get("type") == OptionType.ATTACK.value:
+        aid = o.get("attackId")
+        if aid in _DURALUDON_ATTACKS:
+            mp = my_state(state)
+            act = active_of(mp)
+            if (act or {}).get("id") == _DURALUDON_ID and _ARCHALUDON_EX_ID in _hand_ids(state):
+                op_act = active_of(opp_state(state))
+                dmg = 30 if aid == 223 else 80
+                ko = bool(op_act) and dmg >= op_act.get("hp", 9999)
+                return not ko          # forbid the chip; allow only if it KOs
+        return False
     if o.get("type") != OptionType.ATTACH.value:
         return False
     db = get_db()
@@ -1068,7 +1111,8 @@ def _archaludon_in_play(state: dict) -> bool:
     """True if we're piloting the turbo Archaludon deck (Duraludon / Archaludon in play or just an
     Archaludon line on board). Gates all the Metal-tank scoring below."""
     mp = my_state(state)
-    return any((p or {}).get("id") in (_DURALUDON_ID, _ARCHALUDON_EX_ID, _ARCHALUDON_BABY_ID)
+    arch_ids = (_DURALUDON_ID, _ARCHALUDON_EX_ID) + _ARCHALUDON_BABY_IDS
+    return any((p or {}).get("id") in arch_ids
                for p in [active_of(mp)] + list(mp.get("bench") or []))
 
 
@@ -1176,8 +1220,19 @@ def _archaludon_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
     """Bespoke play priorities for turbo Archaludon. Returns None to fall through to generic /
     the shared Dunsparce-engine scoring (Poké Pad, Boss, Lillie, Ultra Ball … handled elsewhere)."""
     mp = my_state(state)
-    have_arch = any((p or {}).get("id") == _ARCHALUDON_EX_ID
-                    for p in [active_of(mp)] + list(mp.get("bench") or []))
+    bodies = [(p or {}).get("id") for p in [active_of(mp)] + list(mp.get("bench") or [])]
+    have_arch = _ARCHALUDON_EX_ID in bodies
+    # The top players (ShumpeiNomura 72%) Metal-Defender 53% of attacks; our agent was stuck on
+    # Duraludon Hammer In (65%) because it settled for 30 chip instead of DIGGING the Archaludon to
+    # evolve. When we have a Duraludon body but no Archaludon ex in hand, Ultra Ball (the only card
+    # that fetches an ex) is the priority — it grabs Archaludon + we refuel via Assemble Alloy.
+    # We still NEED to find the engine whenever an Archaludon ex is neither in play nor in hand.
+    # (Old code gated this on already having a body down, so on the ladder the agent ignored
+    #  Ultra Ball ~90% of the time it was offered and stalled on Duraludon. Ultra Ball searches
+    #  ANY Pokémon, so it digs the Archaludon ex OR a Duraludon body — fire it to assemble.)
+    need_arch = (not have_arch and _ARCHALUDON_EX_ID not in _hand_ids(state))
+    if cid == _ULTRA_BALL_ID and need_arch:          # Ultra Ball: THE dig for the engine
+        return 17.0
     if cid == _FULL_METAL_LAB_ID:
         # Our wall stadium (−30 to our Metal). High when it isn't already ours — also bounces an
         # opponent's stadium, which this deck loves. Slightly higher once Archaludon is the tank.
@@ -1193,7 +1248,14 @@ def _archaludon_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
         # so a KO'd tank is replaced next turn without losing tempo.
         return 13.0 - 1.5 * bench_n if bench_n < 5 else -1.0
     if cid == _RELICANTH_ID:
-        return 6.0 if bench_n < 5 else -1.0          # situational (Memory Dive → Raging Hammer)
+        if bench_n >= 5:
+            return -1.0
+        # Memory Dive enables Raging Hammer — THE answer to a 330 Mega Starmie our Metal Defender
+        # (220) can't one-shot. Get it down early vs Starmie so the scaled finisher is available.
+        op = opp_state(state)
+        opp_has_starmie = any((p or {}).get("id") == _MEGA_STARMIE_ID
+                              for p in [active_of(op)] + list(op.get("bench") or []))
+        return 13.0 if opp_has_starmie else 6.0
     if cid == _MEOWTH_EX_ID:
         # Consistency tutor (Last-Ditch Catch: fetch a Supporter on bench-play). The turbo deck
         # leans on it to find Carmine/Boss/Lillie — the Hops rule (Boss-only) badly undervalues it
@@ -1201,7 +1263,89 @@ def _archaludon_play_score(cid: int, state: dict, hand_n: int, bench_n: int):
         if bench_n >= 5:
             return -1.0
         return 12.0 - 1.5 * bench_n
+    if cid == _FEZ_EX_ID:
+        # Bench-only draw engine (Flip the Script: draw 3 after a KO). Useful when behind on cards,
+        # but a 2-prize body — bench it once, early, then leave it; never spam it onto a full bench.
+        if any((p or {}).get("id") == _FEZ_EX_ID for p in [active_of(mp)] + list(mp.get("bench") or [])):
+            return -1.0                              # already have one
+        return 9.0 if bench_n < 4 else 1.0
+    if cid == _LUMIOSE_CITY_ID:
+        # Stadium: each turn search a Basic to bench. Strong early development; bump opp stadiums.
+        if _stadium_in_play(state, _LUMIOSE_CITY_ID):
+            return 1.0
+        return 11.0 if (state.get("turn", 99) <= 3 or not have_arch) else 7.0
+    if cid == _PETREL_ID:
+        return 9.0                                   # tutor any Trainer (Boss / Black Belt / Ace)
+    if cid == _BLACK_BELT_ID:
+        # +40 to opp Active ex this turn. Play it only to CONVERT an attack into a KO on an ex.
+        op = opp_state(state); oa = active_of(op); act = active_of(mp)
+        if oa and act and _black_belt_secures_ko(state):
+            return 18.0
+        return 0.3                                   # dead card otherwise — never play speculatively
+    if cid == _JUMBO_ICE_CREAM_ID:
+        # Item heal-all: keeps the tank online. Worth it once there's real damage to recover —
+        # scale with our total damage so it fires when the Archaludon ex is hurt, not turn 1.
+        dmg = _our_total_damage(state)
+        if dmg >= 120:
+            return 16.0
+        if dmg >= 60:
+            return 9.0
+        return 0.5                                   # little/no damage: hold it
+    if cid == _SCOOP_UP_CYCLONE_ID:
+        # Ace Spec: bounce 1 OWN Pokémon to hand. NOT a generic item — only worth it to save a
+        # doomed active Archaludon (heal/reset) or rescue a benched Meowth/Fez before a gust.
+        return 12.0 if _scoop_saves_something(state) else 0.3
+    if cid == _LILLIE_DET_ID and need_arch:
+        # When the engine isn't assembled, refilling to dig the Archaludon line beats sitting on a
+        # clogged hand. Play it AFTER the better searches (Ultra Ball 17, Carmine, Pokegear) but
+        # well above the dead cards — it must never lose to a speculative Black Belt/Scoop.
+        return 10.0
     return None
+
+
+def _our_total_damage(state: dict) -> int:
+    """Total damage sitting on our Pokémon (maxHp - hp summed over active + bench). Drives the
+    Jumbo Ice Cream heal: only play it once there's enough damage to recover for value."""
+    mp = my_state(state)
+    tot = 0
+    for p in [active_of(mp)] + list(mp.get("bench") or []):
+        if not p:
+            continue
+        hp = p.get("hp", 0) or 0
+        mh = p.get("maxHp", hp) or hp
+        tot += max(0, mh - hp)
+    return tot
+
+
+def _black_belt_secures_ko(state: dict) -> bool:
+    """True if Black Belt's +40 turns our active's attack into a KO of the opponent's Active ex."""
+    db = get_db()
+    op = opp_state(state); oa = active_of(op); act = active_of(my_state(state))
+    if not oa or not act:
+        return False
+    try:
+        if not (getattr(db.card(oa.get("id")), "ex", False) or getattr(db.card(oa.get("id")), "megaEx", False)):
+            return False                              # +40 only applies vs an ex active
+    except Exception:
+        return False
+    hp = oa.get("hp", 9999)
+    for base in (120, 160, 220):                      # our common attack bases
+        no = attack_damage_estimate(act.get("id"), oa.get("id"), base)
+        yes = attack_damage_estimate(act.get("id"), oa.get("id"), base + 40)
+        if no < hp <= yes:
+            return True
+    return False
+
+
+def _scoop_saves_something(state: dict) -> bool:
+    """True if our active is a damaged Archaludon likely to be KO'd (bounce to reset it for free)."""
+    act = active_of(my_state(state))
+    if not act:
+        return False
+    if act.get("id") not in ((_ARCHALUDON_EX_ID,) + _ARCHALUDON_BABY_IDS):
+        return False
+    hp = act.get("hp", 0); mx = act.get("maxHp", hp) or hp
+    return hp < mx * 0.5                              # heavily damaged → worth bouncing to rebuild
 
 
 def _stadium_in_play(state: dict, sid: int) -> bool:
@@ -1381,10 +1525,18 @@ def _score_attach(o: dict, state: dict) -> float:
                 return bench[in_play_idx]
         return None
 
-    # ---- Hero's Cape (+100 HP): only ever wants a Mega Starmie, else a Staryu (future Starmie).
+    # ---- Hero's Cape (+100 HP): on the turbo Archaludon deck it ALWAYS goes on the Archaludon ex
+    # (the tank): 300->400 HP makes Metal Defender survive the return swing and keep attacking.
+    # Otherwise (Starmie/Lucario decks) it wants the Mega wall, else its pre-evolution.
     if _card_id_from_option(o, state) == _HEROS_CAPE_ID:
         tgt = _attach_target()
         tid = (tgt or {}).get("id")
+        if _archaludon_in_play(state):
+            if tid == _ARCHALUDON_EX_ID:
+                return 30.0   # always cape the Archaludon ex tank (300 -> 400 HP)
+            if tid == _DURALUDON_ID or tid in _ARCHALUDON_BABY_IDS:
+                return 14.0   # prep the body that will become the tank
+            return -5.0
         if tid in (_MEGA_STARMIE_ID, _MEGA_LUCARIO_ID):
             return 30.0   # +100 HP on the main attacker wall (330->430 / 340->440)
         if tid in (_STARYU_ID, _RIOLU_ID):
@@ -1420,12 +1572,23 @@ def _score_attach(o: dict, state: dict) -> float:
     # next tank is ready when the current one falls. (Assemble Alloy also refuels on evolve.)
     if _archaludon_in_play(state) and _card_id_from_option(o, state) == _METAL_ENERGY_ID:
         tid = (_atgt or {}).get("id")
-        need = max(0, 3 - total_energy(_atgt)) if _atgt else 0
+        have = total_energy(_atgt) if _atgt else 0
+        # vs Mega Starmie the deck runs 4 Crushing Hammer — EVERY loss in testing was energy
+        # starvation (Metal hammered off, can't fire Metal Defender). Insure against it: BUFFER the
+        # active tank to 4 energy (one hammer still leaves 3 = Metal Defender online) AND keep a
+        # benched body charged as a ready replacement.
+        op = opp_state(state)
+        crush = any((p or {}).get("id") == _MEGA_STARMIE_ID
+                    for p in [active_of(op)] + list(op.get("bench") or []))
+        target = 4 if crush else 3
         if tid == _ARCHALUDON_EX_ID:
-            return (16.0 if in_play_area == 4 else 11.0) + max(0, 3 - need)  # active first, fewer-need first
+            base = 16.0 if in_play_area == 4 else 11.0
+            if have < target:
+                return base + (target - have)       # keep loading until buffered; closest-to-ready first
+            return base - 6.0                       # already buffered: low, but still legal
         if tid == _DURALUDON_ID:
-            return 9.0                              # prep the next body
-        if tid in (_MEGA_MAWILE_ID, _ARCHALUDON_BABY_ID):
+            return (12.0 if crush else 9.0)         # vs Crushing Hammer, pre-charge the backup body
+        if tid == _MEGA_MAWILE_ID or tid in _ARCHALUDON_BABY_IDS:
             return 8.0
 
     energy_cid = _card_id_from_option(o, state)
@@ -1547,6 +1710,18 @@ def _score_retreat(state: dict) -> float:
                     return 26.0   # Nebula online — bring the workhorse in now
                 if e >= 1:
                     return 16.0   # Jetting-ready — still worth promoting for tempo
+    # Turbo Archaludon: do NOT retreat the body we want to evolve/attack with. The ladder agent
+    # wasted turns retreating a healthy Duraludon/Archaludon instead of digging the engine. Only
+    # retreat to PROMOTE a more-charged Archaludon ex (the next tank), else stay put.
+    if _archaludon_in_play(state) and act.get("id") in (_DURALUDON_ID, _ARCHALUDON_EX_ID) + _ARCHALUDON_BABY_IDS:
+        my_e = total_energy(act)
+        better = any(b and b.get("id") == _ARCHALUDON_EX_ID and total_energy(b) > my_e
+                     and total_energy(b) >= 3 for b in bench)
+        if better:
+            return 14.0                # a charged Archaludon ex is benched — bring the tank in
+        if curr_hp > 30:
+            return 0.5                 # healthy tank/body: never retreat to shuffle, evolve/attack
+
     if curr_hp <= 30:
         return 7.0 if bench else 1.0   # very low HP: retreat if possible
     if max_hp > 0 and curr_hp < max_hp * 0.4 and bench_ready:
@@ -1713,11 +1888,14 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
                     return 34.0                # opportunistic KO window
                 return 2.0                     # no reason to promote it over Mega Lucario
 
+            # Fezandipiti ex: bench-only draw engine. 210 HP 2-prize bait if sent active.
+            if cid == _FEZ_EX_ID:
+                return 1.0
             # Turbo Archaludon: the Archaludon ex tank is the default promote (220 attacker behind
             # Full Metal Lab). Mega Mawile only when its Gobble Down closer is live (≥3 prizes taken).
             if cid == _ARCHALUDON_EX_ID:
                 return 36.0
-            if cid == _ARCHALUDON_BABY_ID:
+            if cid in _ARCHALUDON_BABY_IDS:
                 return 18.0                    # Iron Blaster 160 — fine secondary / single-prize
             if cid == _MEGA_MAWILE_ID:
                 return 34.0 if _prizes_taken(state) >= 3 else 6.0
@@ -1849,6 +2027,33 @@ def _score_card_select(o: dict, ctx: int, state: dict) -> float:
                 if name == "POKEMON":
                     return 2.0  # preserve Pokémon
         return 5.0
+
+    # ---- Search-to-hand fetch (turbo Archaludon): grab the piece we're MISSING. Without this the
+    # fetch was a flat 5.0 for every card, so Ultra Ball grabbed Duraludon/energy as often as the
+    # Archaludon ex it needs — leaving the agent stuck attacking with raw Duraludon. ----
+    if ctx == SelectContext.TO_HAND.value and _archaludon_in_play(state) and cid is not None:
+        mp = my_state(state)
+        bodies = [(p or {}).get("id") for p in [active_of(mp)] + list(mp.get("bench") or [])]
+        have_arch_in_hand = _ARCHALUDON_EX_ID in _hand_ids(state)
+        have_body = any(b == _DURALUDON_ID or b in _ARCHALUDON_BABY_IDS for b in bodies)
+        if cid == _ARCHALUDON_EX_ID:
+            # THE evolution piece: top priority when we have a Duraludon to put it on and none yet.
+            return 32.0 if (have_body and not have_arch_in_hand) else 18.0
+        if cid == _DURALUDON_ID:
+            n_bodies = sum(1 for b in bodies
+                           if b == _DURALUDON_ID or b == _ARCHALUDON_EX_ID or b in _ARCHALUDON_BABY_IDS)
+            return 17.0 if n_bodies == 0 else 7.0   # need a body if we have none, else low
+        if cid == _BOSS_ORDERS_ID:
+            return 12.0
+        if cid == _METAL_ENERGY_ID:
+            return 10.0
+        if cid in (_DUNSPARCE_ID, _DUNSPARCE_ID_OLD):
+            # the draw engine — fetch it when none is online yet (consistency vs no-brick decks)
+            has_draw = any(b in (_DUDUNSPARCE_ID, _DUNSPARCE_ID, _DUNSPARCE_ID_OLD) for b in bodies)
+            return 9.0 if has_draw else 13.0
+        if cid == _MEOWTH_EX_ID:
+            return 9.0
+        return 6.0
 
     # ---- Return to deck: prefer putting back basic energy ----
     if ctx in (SelectContext.TO_DECK.value, SelectContext.TO_DECK_BOTTOM.value):
