@@ -153,6 +153,9 @@ def _make_agent():
     if kind == "lucario":
         from .lucario import LucarioAgent
         return LucarioAgent(deck=read_deck(), seed=random.randrange(1 << 30))
+    if kind == "ceruledge":
+        from .ceruledge import CeruledgeAgent
+        return CeruledgeAgent(deck=read_deck(), seed=random.randrange(1 << 30))
     cls = BeamAgent if kind == "beam" else MctsAgent
     return cls(deck=read_deck(), seed=random.randrange(1 << 30))
 

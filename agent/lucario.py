@@ -386,10 +386,16 @@ class LucarioPolicy:
         if option.type == OptionType.RETREAT:
             return 2000 if self.plan.attacker >= 1 else -1
         if option.type == OptionType.ATTACK:
-            # Makuhita's Corkscrew Punch (976) is 10 damage — never worth a turn over developing /
-            # evolving to Hariyama. Real ladder losses showed the agent throwing it 7% of the time
-            # (vs 2% in wins) when no real attack was planned. Score it below END so we don't waste
-            # the turn; it is still chosen if it is genuinely the only legal action.
+            # STABILITY: only attack when _plan_attack found a real attack (plan.attacker >= 0).
+            # _base_attack returns None for engine pokes (Riolu 981, Lunatone PowerGem, Makuhita
+            # Corkscrew), so they never enter the plan — but the raw option still scored 1000 > END,
+            # so the pilot wasted early turns throwing a weak unplanned poke (observed: Riolu attack
+            # on turn 2 vs Hops) instead of developing toward Lucario. Suppress unplanned attacks
+            # below END so we pass / build. Still chosen if it is genuinely the only legal action.
+            if self.plan.attacker < 0:
+                return -1
+            # Makuhita's Corkscrew Punch (976) is 10 damage — never worth a turn over evolving to
+            # Hariyama; suppress unless a benched/switched attacker (attacker >= 1) is the plan.
             if option.attackId == MAKUHITA_CORKSCREW and self.plan.attacker < 1:
                 return -1
             return 1100 if (option.attackId == MEGA_BRAVE) == (self.plan.attack_index == 1) else 1000
